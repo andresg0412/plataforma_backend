@@ -1,17 +1,8 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { z } from 'zod';
 import pool from '../libs/db';
 import { UserService } from '../services/user.service';
-
-// Nuevo esquema de usuario según la base de datos
-const UserSchema = z.object({
-  id: z.number().optional(),
-  nombre: z.string().min(1),
-  email: z.string().email(),
-  password_hash: z.string().min(6),
-  rol_id: z.number(),
-  empresa_id: z.number().nullable().optional(),
-});
+import { User } from '../interfaces/user.interface';
+import { UserSchema } from '../schemas/user.schema';
 
 const userService = new UserService();
 
