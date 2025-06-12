@@ -1,6 +1,6 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
-import { supabase } from '../libs/supabaseClient';
+import pool from '../libs/db';
 import { UserService } from '../services/user.service';
 
 // Nuevo esquema de usuario según la base de datos
@@ -42,36 +42,36 @@ export const userController = {
 
     // Obtener permisos del usuario según su rol
     // 1. Buscar los permisos asociados al rol del usuario
-    const { data: permisos, error: permisosError } = await supabase
-      .from('roles_permissions')
-      .select('permissions(key)')
-      .eq('role_id', user.rol_id);
-    if (permisosError) return reply.status(500).send({ message: 'Error obteniendo permisos' });
-    const permisosList = (permisos || []).map((p: any) => p.permissions?.key).filter(Boolean);
-
-    // Generar el JWT con los datos requeridos
-    const token = reply.server.jwt.sign({
-      id: user.id,
-      nombre: user.nombre,
-      role: user.roles?.name,
-      permisos: permisosList,
-      empresaId: user.empresa_id,
-      propietarioId: user.propietarios?.id ?? null,
-      inmuebles: user.inmuebles?.map((i: any) => i.id) ?? [],
-    });
-    return reply.send({
-      token,
-      user: {
-        id: user.id,
+    try {
+      const permisosQuery = `SELECT p.key FROM roles_permissions rp JOIN permissions p ON rp.id_permission = p.id_permission WHERE rp.id_rol = $1`;
+      const { rows: permisosRows } = await pool.query(permisosQuery, [user.id_roles]);
+      const permisosList = permisosRows.map((p: any) => p.key);
+      // Generar el JWT con los datos requeridos
+      const token = reply.server.jwt.sign({
+        id: user.id_usuario,
         nombre: user.nombre,
-        email: user.email,
-        role: user.roles?.name,
+        role: user.rol_name,
         permisos: permisosList,
-        empresaId: user.empresa_id,
-        propietarioId: user.propietarios?.id ?? null,
-        inmuebles: user.inmuebles?.map((i: any) => i.id) ?? [],
-      },
-    });
+        empresaId: user.id_empresa,
+        propietarioId: user.id_propietario ?? null,
+        inmuebles: user.id_inmueble ? [user.id_inmueble] : [],
+      });
+      return reply.send({
+        token,
+        user: {
+          id: user.id_usuario,
+          nombre: user.nombre,
+          email: user.email,
+          role: user.rol_name,
+          permisos: permisosList,
+          empresaId: user.id_empresa,
+          propietarioId: user.id_propietario ?? null,
+          inmuebles: user.id_inmueble ? [user.id_inmueble] : [],
+        },
+      });
+    } catch (permisosError) {
+      return reply.status(500).send({ message: 'Error obteniendo permisos', error: permisosError });
+    }
   },
   resetPassword: async (req: FastifyRequest, reply: FastifyReply) => {
     const { email, password } = req.body as { email: string; password: string };
