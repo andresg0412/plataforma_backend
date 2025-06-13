@@ -5,7 +5,12 @@ import { authMiddleware } from '../middlewares/authMiddleware';
 export async function userRoutes(server: FastifyInstance, opts: FastifyPluginOptions) {
   server.get('/', { preHandler: [authMiddleware] }, userController.list);
   //server.get('/', userController.list); // Liberado: no requiere authMiddleware
-  server.post('/', userController.create); // Registro público
+  // Solo superadmin, empresa y administrador pueden crear usuarios (no público)
+  server.post('/', { preHandler: [authMiddleware] }, userController.create);
+  // Editar usuario
+  server.put('/:id', { preHandler: [authMiddleware] }, userController.update);
+  // Eliminar usuario
+  server.delete('/:id', { preHandler: [authMiddleware] }, userController.delete);
   server.get('/:id', { preHandler: [authMiddleware] }, userController.getById);
   server.post('/login', userController.login);
   server.post('/reset-password', userController.resetPassword);
