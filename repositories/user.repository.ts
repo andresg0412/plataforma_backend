@@ -28,7 +28,7 @@ export class UserRepository {
     }
   }
   async list() {
-    const query = `SELECT u.id_usuario, u.nombre, u.email, u.id_roles, u.id_empresa, u.creado_en, r.name as rol_name, e.nombre as empresa_nombre
+    const query = `SELECT u.id_usuario, u.nombre, u.email, u.id_roles, u.id_empresa, u.username, u.creado_en, r.name as rol_name, e.nombre as empresa_nombre
       FROM usuarios u
       LEFT JOIN roles r ON u.id_roles = r.id_rol
       LEFT JOIN empresas e ON u.id_empresa = e.id_empresa`;

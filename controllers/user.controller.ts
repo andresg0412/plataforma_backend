@@ -27,6 +27,7 @@ export const userController = {
     return reply.send(dataFiltrada);
   },
   create: async (req: FastifyRequest, reply: FastifyReply) => {
+    //FEATURE: CREAR USUARIO, EXTRAER USERNAME DEL EMAIL ANTES DEL @
     const parse = UserSchema.safeParse(req.body);
     if (!parse.success) return reply.status(400).send(parse.error);
     // Validar permisos antes de crear
