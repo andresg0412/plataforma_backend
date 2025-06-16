@@ -140,17 +140,10 @@ export const userController = {
   },
   delete: async (req: FastifyRequest, reply: FastifyReply) => {
     const { id } = req.params as { id: string };
-    const { data: userTarget, error: errorTarget } = await userService.getById(id);
-    if (errorTarget || !userTarget) return reply.status(404).send({ message: 'Usuario no encontrado' });
-    // Validar permiso para eliminar usuario
-    const permiso = checkUserPermission(req, 'eliminar', {
-      id_roles: userTarget.id_roles,
-      id_empresa: userTarget.id_empresa ?? null,
-    });
-    if (!permiso.allowed) {
-      return reply.status(403).send({ message: permiso.reason || 'No tiene permisos para eliminar este usuario' });
+    const result = await userService.delete(id);
+    if (result.error) {
+      return reply.status(result.error.status).send({ message: result.error.message });
     }
-    // Aquí iría la lógica de eliminación (no implementada en este ejemplo)
-    return reply.send({ message: 'Eliminación permitida (implementa lógica de delete aquí)' });
+    return reply.send({ success: true, message: 'Usuario eliminado correctamente' });
   },
 };

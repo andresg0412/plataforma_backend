@@ -61,4 +61,13 @@ export class UserRepository {
       return { error };
     }
   }
+  async deleteById(id: string) {
+    const query = `DELETE FROM usuarios WHERE id_usuario = $1`;
+    try {
+      const { rowCount } = await pool.query(query, [id]);
+      return { success: !!rowCount && rowCount > 0, error: null };
+    } catch (error: any) {
+      return { success: false, error };
+    }
+  }
 }

@@ -46,4 +46,26 @@ export class UserService {
     if (updateError) return { error: { status: 500, message: updateError.message } };
     return { success: true };
   }
+  async delete(id: string) {
+    // Obtener usuario para validar superadmin
+    const { data: user, error } = await this.repo.getById(id);
+    if (error || !user) {
+      return { error: { status: 404, message: 'Usuario no encontrado' } };
+    }
+    // Validar superadmin (puedes ajustar el id o correo según tu base de datos)
+    const SUPERADMIN_ID = 4; // Ajusta según tu sistema
+    const SUPERADMIN_EMAIL = 'admin@mail.com'; // Ajusta según tu sistema
+    if (user.id_usuario === SUPERADMIN_ID || user.email === SUPERADMIN_EMAIL) {
+      return { error: { status: 403, message: 'No se puede eliminar el usuario superadmin' } };
+    }
+    // Eliminar usuario
+    const { success, error: deleteError } = await this.repo.deleteById(id);
+    if (deleteError) {
+      return { error: { status: 500, message: deleteError.message } };
+    }
+    if (!success) {
+      return { error: { status: 404, message: 'Usuario no encontrado o no eliminado' } };
+    }
+    return { success: true };
+  }
 }
