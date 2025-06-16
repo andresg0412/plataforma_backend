@@ -70,4 +70,22 @@ export class UserRepository {
       return { success: false, error };
     }
   }
+  async updateById(id: string, data: any) {
+    // Construir query dinámico solo con los campos editables
+    const allowedFields = ['nombre', 'password_hash', 'id_roles', 'id_empresa', 'creado_en'];
+    const fields = Object.keys(data).filter(f => allowedFields.includes(f));
+    if (fields.length === 0) {
+      return { success: false, error: new Error('No hay campos válidos para actualizar') };
+    }
+    const setClause = fields.map((f, i) => `${f} = $${i + 1}`).join(', ');
+    const values = fields.map(f => data[f]);
+    values.push(id);
+    const query = `UPDATE usuarios SET ${setClause} WHERE id_usuario = $${fields.length + 1}`;
+    try {
+      const { rowCount } = await pool.query(query, values);
+      return { success: !!rowCount && rowCount > 0, error: null };
+    } catch (error: any) {
+      return { success: false, error };
+    }
+  }
 }

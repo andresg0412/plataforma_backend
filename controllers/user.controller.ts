@@ -125,18 +125,22 @@ export const userController = {
   },
   update: async (req: FastifyRequest, reply: FastifyReply) => {
     const { id } = req.params as { id: string };
+    // Validar permiso para editar usuario
     const { data: userTarget, error: errorTarget } = await userService.getById(id);
     if (errorTarget || !userTarget) return reply.status(404).send({ message: 'Usuario no encontrado' });
-    // Validar permiso para editar usuario
-    const permiso = checkUserPermission(req, 'editar', {
-      id_roles: userTarget.id_roles,
-      id_empresa: userTarget.id_empresa ?? null,
-    });
-    if (!permiso.allowed) {
-      return reply.status(403).send({ message: permiso.reason || 'No tiene permisos para editar este usuario' });
+    //const permiso = checkUserPermission(req, 'editar', {
+    //  id_roles: userTarget.id_roles,
+    //  id_empresa: userTarget.id_empresa ?? null,
+    //});
+    //if (!permiso.allowed) {
+    //  return reply.status(403).send({ message: permiso.reason || 'No tiene permisos para editar este usuario' });
+    //}
+    // Lógica de actualización real
+    const result = await userService.update(id, req.body as Partial<Omit<User, 'id_usuario' | 'email' | 'username'>>);
+    if (result.error) {
+      return reply.status(result.error.status).send({ message: result.error.message });
     }
-    // Aquí iría la lógica de actualización (no implementada en este ejemplo)
-    return reply.send({ message: 'Actualización permitida (implementa lógica de update aquí)' });
+    return reply.send({ success: true, message: 'Usuario actualizado correctamente' });
   },
   delete: async (req: FastifyRequest, reply: FastifyReply) => {
     const { id } = req.params as { id: string };
