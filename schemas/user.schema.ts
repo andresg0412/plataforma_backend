@@ -9,4 +9,5 @@ export const UserSchema = z.object({
   id_roles: z.number(),
   id_empresa: z.number().nullable().optional(),
   creado_en: z.date().optional(),
+  username: z.string().min(1).optional(),
 });

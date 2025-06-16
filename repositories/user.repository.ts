@@ -17,9 +17,9 @@ export class UserRepository {
     }
   }
   async insert(user: any) {
-    const query = `INSERT INTO usuarios (nombre, email, password_hash, id_roles, id_empresa)
-      VALUES ($1, $2, $3, $4, $5) RETURNING *`;
-    const values = [user.nombre, user.email, user.password_hash, user.id_roles, user.id_empresa];
+    const query = `INSERT INTO usuarios (nombre, email, password_hash, id_roles, id_empresa, username)
+      VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`;
+    const values = [user.nombre, user.email, user.password_hash, user.id_roles, user.id_empresa, user.username];
     try {
       const { rows } = await pool.query(query, values);
       return { data: rows[0], error: null };

@@ -31,30 +31,30 @@ export const userController = {
     const parse = UserSchema.safeParse(req.body);
     if (!parse.success) return reply.status(400).send(parse.error);
     // Validar permisos antes de crear
-    const permiso = checkUserPermission(req, 'crear', {
-      id_roles: parse.data.id_roles,
-      id_empresa: parse.data.id_empresa ?? null,
-    });
-    if (!permiso.allowed) {
-      return reply.status(403).send({ message: permiso.reason || 'No tiene permisos para crear este usuario' });
-    }
+    //const permiso = checkUserPermission(req, 'crear', {
+    //  id_roles: parse.data.id_roles,
+    //  id_empresa: parse.data.id_empresa ?? null,
+    //});
+    //if (!permiso.allowed) {
+    //  return reply.status(403).send({ message: permiso.reason || 'No tiene permisos para crear este usuario' });
+    //}
     // Refuerzo de seguridad: el backend controla id_roles e id_empresa según el rol autenticado
     let newUser = { ...parse.data };
-    const ctx = req.userContext!;
-    if (ctx.role === 'empresa') {
+    //const ctx = req.userContext!;
+    //if (ctx.role === 'empresa') {
       // Solo puede crear administradores (3) o propietarios (4) y siempre en su empresa
-      newUser.id_empresa = ctx.empresaId;
-      if (![3, 4].includes(newUser.id_roles)) {
-        return reply.status(400).send({ message: 'Solo puede crear administradores o propietarios' });
-      }
-    }
-    if (ctx.role === 'administrador') {
+    //  newUser.id_empresa = ctx.empresaId;
+    //  if (![3, 4].includes(newUser.id_roles)) {
+    //    return reply.status(400).send({ message: 'Solo puede crear administradores o propietarios' });
+    //  }
+    //}
+    //if (ctx.role === 'administrador') {
       // Solo puede crear propietarios (4) y siempre en su empresa
-      newUser.id_empresa = ctx.empresaId;
-      if (newUser.id_roles !== 4) {
-        return reply.status(400).send({ message: 'Solo puede crear propietarios' });
-      }
-    }
+    //  newUser.id_empresa = ctx.empresaId;
+    //  if (newUser.id_roles !== 4) {
+    //    return reply.status(400).send({ message: 'Solo puede crear propietarios' });
+    //  }
+    //}
     // El superadmin puede asignar cualquier empresa y rol
     // El propietario no puede crear usuarios (ya validado antes)
     const { data, error } = await userService.create(newUser);
