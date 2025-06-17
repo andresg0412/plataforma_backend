@@ -1,4 +1,5 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
+import { errorResponse } from '../libs/responseHelper';
 
 export async function authMiddleware(req: FastifyRequest, reply: FastifyReply) {
   try {
@@ -12,6 +13,8 @@ export async function authMiddleware(req: FastifyRequest, reply: FastifyReply) {
       empresaId: payload.empresaId ?? null,
     };
   } catch (err) {
-    return reply.status(401).send({ message: 'Unauthorized' });
+    return reply
+      .status(401)
+      .send(errorResponse({ message: 'Unauthorized', code: 401, error: err }));
   }
 }
