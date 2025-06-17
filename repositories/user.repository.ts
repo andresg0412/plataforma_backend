@@ -88,4 +88,62 @@ export class UserRepository {
       return { success: false, error };
     }
   }
+  async findById(id_usuario: number) {
+    const query = `SELECT id_usuario, id_roles, id_empresa FROM usuarios WHERE id_usuario = $1`;
+    try {
+      const { rows } = await pool.query(query, [id_usuario]);
+      return { data: rows[0], error: null };
+    } catch (error: any) {
+      return { data: null, error };
+    }
+  }
+
+  async listAllExcept(userId: number) {
+    const query = `
+      SELECT u.id_usuario, u.nombre, u.email, u.id_roles, u.id_empresa, u.username, u.creado_en, r.name as rol_name, e.nombre as empresa_nombre
+      FROM usuarios u
+      LEFT JOIN roles r ON u.id_roles = r.id_rol
+      LEFT JOIN empresas e ON u.id_empresa = e.id_empresa
+      WHERE id_usuario <> $1;
+      `;
+    try {
+      const { rows } = await pool.query(query, [userId]);
+      return { data: rows, error: null };
+    } catch (error: any) {
+      console.error('Error listing users except self:', error);
+      return { data: null, error };
+    }
+  }
+
+  async listByEmpresaExcept(empresaId: number, userId: number) {
+    const query = `
+      SELECT u.id_usuario, u.nombre, u.email, u.id_roles, u.id_empresa, u.username, u.creado_en, r.name as rol_name, e.nombre as empresa_nombre
+      FROM usuarios u
+      LEFT JOIN roles r ON u.id_roles = r.id_rol
+      LEFT JOIN empresas e ON u.id_empresa = e.id_empresa
+      WHERE u.id_empresa = $1 AND u.id_usuario <> $2;
+      `;
+    try {
+      const { rows } = await pool.query(query, [empresaId, userId]);
+      return { data: rows, error: null };
+    } catch (error: any) {
+      return { data: null, error };
+    }
+  }
+
+  async listAdminsAndOwnersByEmpresaExcept(empresaId: number, adminId: number, adminRole: number, ownerRole: number) {
+    const query = `
+      SELECT u.id_usuario, u.nombre, u.email, u.id_roles, u.id_empresa, u.username, u.creado_en, r.name as rol_name, e.nombre as empresa_nombre
+      FROM usuarios u
+      LEFT JOIN roles r ON u.id_roles = r.id_rol
+      LEFT JOIN empresas e ON u.id_empresa = e.id_empresa
+      WHERE u.id_empresa = $1 AND u.id_roles IN ($2, $3) AND u.id_usuario <> $4;
+    `;
+    try {
+      const { rows } = await pool.query(query, [empresaId, adminRole, ownerRole, adminId]);
+      return { data: rows, error: null };
+    } catch (error: any) {
+      return { data: null, error };
+    }
+  }
 }

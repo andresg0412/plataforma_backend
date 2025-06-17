@@ -6,27 +6,25 @@ import { User } from '../interfaces/user.interface';
 import { UserSchema } from '../schemas/user.schema';
 import { checkUserPermission } from '../middlewares/checkUserPermission';
 import { successResponse, errorResponse } from '../libs/responseHelper';
+import { getVisibleUsers } from '../services/users/getUsersService';
 
 const userService = new UserService();
 
 export const userController = {
   list: async (req: FastifyRequest, reply: FastifyReply) => {
-    // Solo superadmin, empresa y administrador pueden ver usuarios
-    //const ctx = req.userContext;
-    //if (!ctx || ctx.role === 'propietario') {
-    //  return reply.status(403).send(errorResponse({ message: 'No tiene permisos para ver usuarios', code: 403, error: 'Forbidden' }));
-    //}
-    const { data, error } = await userService.list();
-    console.log('Datos de usuarios:', data);
-    // Si no es superadmin, filtrar por empresa y excluir al usuario autenticado
-    //if (ctx.role !== 'superadmin') {
-    //  const dataFiltrada = data?.filter((u: any) => u.id_empresa === ctx.empresaId && u.id_usuario !== ctx.id);
-    //  return reply.send(successResponse(dataFiltrada));
-    //}
-    // Si es superadmin, también excluye al usuario autenticado
-    //const dataFiltrada = data?.filter((u: any) => u.id_usuario !== ctx.id);
-    //return reply.send(successResponse(dataFiltrada));
-    return reply.send(successResponse(data));
+    const ctx = req.userContext;
+    if (!ctx || !ctx.id) {
+      return reply.status(401).send(errorResponse({ message: 'No autenticado', code: 401, error: 'Unauthorized' }));
+    }
+    try {
+      const { data, error } = await getVisibleUsers(ctx.id);
+      if (error) {
+        return reply.status(403).send(errorResponse({ message: error.message, code: 403, error: 'Forbidden' }));
+      }
+      return reply.send(successResponse(data));
+    } catch (err) {
+      return reply.status(500).send(errorResponse({ message: 'Error al obtener usuarios', code: 500, error: err }));
+    }
   },
   create: async (req: FastifyRequest, reply: FastifyReply) => {
     //FEATURE: CREAR USUARIO, EXTRAER USERNAME DEL EMAIL ANTES DEL @
