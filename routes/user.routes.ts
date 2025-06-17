@@ -12,8 +12,8 @@ export async function userRoutes(server: FastifyInstance, opts: FastifyPluginOpt
   //server.put('/:id', { preHandler: [authMiddleware] }, userController.update);
   server.put('/:id', userController.update);
   // Eliminar usuario
-  //server.delete('/:id', { preHandler: [authMiddleware] }, userController.delete);
-  server.delete('/:id', userController.delete);
+  server.delete('/:id', { preHandler: [authMiddleware] }, userController.delete);
+  //server.delete('/:id', userController.delete);
   //server.get('/:id', { preHandler: [authMiddleware] }, userController.getById);
   server.get('/:id', userController.getById);
   server.post('/login', userController.login);

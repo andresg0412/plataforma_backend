@@ -7,6 +7,7 @@ import { UserSchema } from '../schemas/user.schema';
 import { checkUserPermission } from '../middlewares/checkUserPermission';
 import { successResponse, errorResponse } from '../libs/responseHelper';
 import { getVisibleUsers } from '../services/users/getUsersService';
+import { deleteUserService } from '../services/users/deleteUserService';
 
 const userService = new UserService();
 
@@ -139,10 +140,14 @@ export const userController = {
     return reply.send(successResponse({ success: true, message: 'Usuario actualizado correctamente' }));
   },
   delete: async (req: FastifyRequest, reply: FastifyReply) => {
+    const ctx = req.userContext;
+    if (!ctx || !ctx.id) {
+      return reply.status(401).send(errorResponse({ message: 'No autenticado', code: 401, error: 'Unauthorized' }));
+    }
     const { id } = req.params as { id: string };
-    const result = await userService.delete(id);
+    const result = await deleteUserService(Number(ctx.id), Number(id));
     if (result.error) {
-      return reply.status(result.error.status || 500).send(errorResponse({ message: result.error.message, code: result.error.status || 500, error: result.error }));
+      return reply.status(result.error.status || 403).send(errorResponse({ message: result.error.message, code: result.error.status || 403, error: result.error }));
     }
     return reply.send(successResponse({ success: true, message: 'Usuario eliminado correctamente' }));
   },
