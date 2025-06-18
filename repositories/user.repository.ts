@@ -100,7 +100,7 @@ export class UserRepository {
 
   async listAllExcept(userId: number) {
     const query = `
-      SELECT u.id_usuario, u.nombre, u.email, u.id_roles, u.id_empresa, u.username, u.creado_en, r.name as rol_name, e.nombre as empresa_nombre
+      SELECT u.id_usuario, u.cedula, u.nombre, u.apellido, u.email, u.id_roles, u.id_empresa, u.username, u.creado_en, r.name as rol_name, e.nombre as empresa_nombre
       FROM usuarios u
       LEFT JOIN roles r ON u.id_roles = r.id_rol
       LEFT JOIN empresas e ON u.id_empresa = e.id_empresa
@@ -117,7 +117,7 @@ export class UserRepository {
 
   async listByEmpresaExcept(empresaId: number, userId: number) {
     const query = `
-      SELECT u.id_usuario, u.nombre, u.email, u.id_roles, u.id_empresa, u.username, u.creado_en, r.name as rol_name, e.nombre as empresa_nombre
+      SELECT u.id_usuario, u.cedula, u.nombre, u.apellido, u.email, u.id_roles, u.id_empresa, u.username, u.creado_en, r.name as rol_name, e.nombre as empresa_nombre
       FROM usuarios u
       LEFT JOIN roles r ON u.id_roles = r.id_rol
       LEFT JOIN empresas e ON u.id_empresa = e.id_empresa
@@ -133,7 +133,7 @@ export class UserRepository {
 
   async listAdminsAndOwnersByEmpresaExcept(empresaId: number, adminId: number, adminRole: number, ownerRole: number) {
     const query = `
-      SELECT u.id_usuario, u.nombre, u.email, u.id_roles, u.id_empresa, u.username, u.creado_en, r.name as rol_name, e.nombre as empresa_nombre
+      SELECT u.id_usuario, u.cedula, u.nombre, u.apellido, u.email, u.id_roles, u.id_empresa, u.username, u.creado_en, r.name as rol_name, e.nombre as empresa_nombre
       FROM usuarios u
       LEFT JOIN roles r ON u.id_roles = r.id_rol
       LEFT JOIN empresas e ON u.id_empresa = e.id_empresa
