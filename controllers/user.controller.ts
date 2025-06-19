@@ -8,6 +8,7 @@ import { checkUserPermission } from '../middlewares/checkUserPermission';
 import { successResponse, errorResponse } from '../libs/responseHelper';
 import { getVisibleUsers } from '../services/users/getUsersService';
 import { deleteUserService } from '../services/users/deleteUserService';
+import { createUserService } from '../services/users/createUserService';
 
 const userService = new UserService();
 
@@ -28,39 +29,22 @@ export const userController = {
     }
   },
   create: async (req: FastifyRequest, reply: FastifyReply) => {
-    //FEATURE: CREAR USUARIO, EXTRAER USERNAME DEL EMAIL ANTES DEL @
+    const ctx = req.userContext;
+    if (!ctx || !ctx.id) {
+      return reply.status(401).send(errorResponse({ message: 'No autenticado', code: 401, error: 'Unauthorized' }));
+    }
     const parse = UserSchema.safeParse(req.body);
-    if (!parse.success) return reply.status(400).send(errorResponse({ message: 'Datos inválidos', code: 400, error: parse.error }));
-    // Validar permisos antes de crear
-    //const permiso = checkUserPermission(req, 'crear', {
-    //  id_roles: parse.data.id_roles,
-    //  id_empresa: parse.data.id_empresa ?? null,
-    //});
-    //if (!permiso.allowed) {
-    //  return reply.status(403).send({ message: permiso.reason || 'No tiene permisos para crear este usuario' });
-    //}
-    // Refuerzo de seguridad: el backend controla id_roles e id_empresa según el rol autenticado
-    let newUser = { ...parse.data };
-    //const ctx = req.userContext!;
-    //if (ctx.role === 'empresa') {
-      // Solo puede crear administradores (3) o propietarios (4) y siempre en su empresa
-    //  newUser.id_empresa = ctx.empresaId;
-    //  if (![3, 4].includes(newUser.id_roles)) {
-    //    return reply.status(400).send({ message: 'Solo puede crear administradores o propietarios' });
-    //  }
-    //}
-    //if (ctx.role === 'administrador') {
-      // Solo puede crear propietarios (4) y siempre en su empresa
-    //  newUser.id_empresa = ctx.empresaId;
-    //  if (newUser.id_roles !== 4) {
-    //    return reply.status(400).send({ message: 'Solo puede crear propietarios' });
-    //  }
-    //}
-    // El superadmin puede asignar cualquier empresa y rol
-    // El propietario no puede crear usuarios (ya validado antes)
-    const { data, error } = await userService.create(newUser);
-    if (error) return reply.status(500).send(errorResponse({ message: error.message, code: 500, error }));
-    return reply.status(201).send(successResponse(data, 201));
+    if (!parse.success) {
+      console.error('Error al validar datos de usuario:', parse.error);
+      return reply.status(400).send(errorResponse({ message: 'Datos inválidos', code: 400, error: parse.error }));
+    }
+    const result = await createUserService(Number(ctx.id), parse.data);
+    if (result.error) {
+      console.error('Error al crear usuario:', result.error);
+      return reply.status(result.error.status || 400).send(errorResponse({ message: result.error.message, code: result.error.status || 400, error: result.error }));
+    }
+    const responseData = 'data' in result ? result.data : result;
+    return reply.status(201).send(successResponse(responseData, 201));
   },
   getById: async (req: FastifyRequest, reply: FastifyReply) => {
     const { id } = req.params as { id: string };

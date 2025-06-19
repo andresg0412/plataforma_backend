@@ -7,7 +7,7 @@ export async function userRoutes(server: FastifyInstance, opts: FastifyPluginOpt
   //server.get('/', userController.list); // Liberado: no requiere authMiddleware
   // Solo superadmin, empresa y administrador pueden crear usuarios (no público)
   //server.post('/', { preHandler: [authMiddleware] }, userController.create);
-  server.post('/', userController.create);
+  server.post('/', { preHandler: [authMiddleware] }, userController.create);
   // Editar usuario
   //server.put('/:id', { preHandler: [authMiddleware] }, userController.update);
   server.put('/:id', userController.update);
