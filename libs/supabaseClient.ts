@@ -1,7 +1,2 @@
-import { createClient } from '@supabase/supabase-js';
-import 'dotenv/config';
-
-const supabaseUrl = process.env.SUPABASE_URL ?? '';
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
-
-export const supabase = createClient(supabaseUrl, supabaseKey);
+// Este archivo ya no se usará. El backend ahora utiliza PostgreSQL directamente con la librería pg.
+// Puedes eliminar este archivo si lo deseas.

@@ -3,18 +3,32 @@ import { userController } from '../controllers/user.controller';
 
 // Mock FastifyReply
 const reply = () => {
-  let statusCode = 200;
-  let payload: any;
-  return {
-    status: (code: number) => { statusCode = code; return reply(); },
-    send: (data: any) => { payload = data; return { statusCode, payload }; },
+  let res = {
+    statusCode: 200,
+    payload: undefined as any,
+    status(code: number) {
+      this.statusCode = code;
+      return this;
+    },
+    send(data: any) {
+      this.payload = data;
+      return this;
+    },
   };
+  return res;
 };
 
 describe('userController', () => {
   it('should create a user', async () => {
-    const req: any = { body: { email: 'test@mail.com', name: 'Test' } };
-    const res = await userController.create(req, reply() as any);
+    const req: any = { body: { 
+      email: 'test@mail.com', 
+      nombre: 'Test', 
+      password_hash: '123456', 
+      id_roles: 1, 
+      id_empresa: null 
+    }};
+    const res = reply();
+    await userController.create(req, res as any);
     expect(res.statusCode).toBe(201);
     expect(res.payload.email).toBe('test@mail.com');
   });
