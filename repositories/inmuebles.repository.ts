@@ -6,14 +6,10 @@ export class InmueblesRepository {
    */
   async getAllInmuebles() {
     const query = `
-      SELECT i.id_inmueble, i.direccion, i.tipo, i.valor_arriendo, i.estado, 
-             i.id_empresa, i.id_propietario, i.creado_en,
-             e.nombre as empresa_nombre,
-             p.nombre as propietario_nombre, p.telefono as propietario_telefono
+      SELECT i.id_inmueble, i.nombre, i.descripcion, i.direccion, i.capacidad, i.id_propietario, i.id_empresa, i.estado,
+             e.nombre_empresa as empresa_nombre
       FROM inmuebles i
       LEFT JOIN empresas e ON i.id_empresa = e.id_empresa
-      LEFT JOIN propietarios p ON i.id_propietario = p.id_propietario
-      ORDER BY i.creado_en DESC
     `;
     try {
       const { rows } = await pool.query(query);
@@ -28,15 +24,11 @@ export class InmueblesRepository {
    */
   async getInmueblesByEmpresa(empresaId: number) {
     const query = `
-      SELECT i.id_inmueble, i.direccion, i.tipo, i.valor_arriendo, i.estado, 
-             i.id_empresa, i.id_propietario, i.creado_en,
-             e.nombre as empresa_nombre,
-             p.nombre as propietario_nombre, p.telefono as propietario_telefono
+      SELECT i.id_inmueble, i.nombre, i.descripcion, i.direccion, i.capacidad, i.id_propietario, i.id_empresa, i.estado,
+             e.nombre as empresa_nombre
       FROM inmuebles i
       LEFT JOIN empresas e ON i.id_empresa = e.id_empresa
-      LEFT JOIN propietarios p ON i.id_propietario = p.id_propietario
       WHERE i.id_empresa = $1
-      ORDER BY i.creado_en DESC
     `;
     try {
       const { rows } = await pool.query(query, [empresaId]);
@@ -51,15 +43,11 @@ export class InmueblesRepository {
    */
   async getInmueblesByEmpresaAndPropietario(empresaId: number, propietarioId: number) {
     const query = `
-      SELECT i.id_inmueble, i.direccion, i.tipo, i.valor_arriendo, i.estado, 
-             i.id_empresa, i.id_propietario, i.creado_en,
-             e.nombre as empresa_nombre,
-             p.nombre as propietario_nombre, p.telefono as propietario_telefono
+      SELECT i.id_inmueble, i.nombre, i.descripcion, i.direccion, i.capacidad, i.id_propietario, i.id_empresa, i.estado,
+             e.nombre as empresa_nombre
       FROM inmuebles i
       LEFT JOIN empresas e ON i.id_empresa = e.id_empresa
-      LEFT JOIN propietarios p ON i.id_propietario = p.id_propietario
       WHERE i.id_empresa = $1 AND i.id_propietario = $2
-      ORDER BY i.creado_en DESC
     `;
     try {
       const { rows } = await pool.query(query, [empresaId, propietarioId]);
