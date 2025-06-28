@@ -1,16 +1,16 @@
 export interface Inmueble {
   id_inmueble?: number;
-  direccion: string;
-  ciudad: string;
-  departamento: string;
-  tipo_inmueble: string;
-  area: number;
-  precio_alquiler?: number;
-  precio_venta?: number;
-  estado: string;
+  titulo: string;
   descripcion?: string;
+  direccion: string;
+  precio: number;
+  tipo_inmueble: string; // casa, apartamento, oficina, etc.
+  habitaciones?: number;
+  banos?: number;
+  area_m2?: number;
+  estado: 'activo' | 'inactivo';
   id_propietario: number;
-  id_empresa: number;
+  id_empresa?: number | null;
   creado_en?: Date;
   actualizado_en?: Date;
 }

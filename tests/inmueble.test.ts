@@ -1,7 +1,10 @@
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { inmuebleController } from '../controllers/inmueble.controller';
+import { deleteInmuebleService } from '../services/inmuebles/deleteInmuebleService';
 
+// Mock the service
+vi.mock('../services/inmuebles/deleteInmuebleService');
 
 // Mock FastifyReply
 const reply = () => {
@@ -21,6 +24,91 @@ const reply = () => {
 };
 
 describe('inmuebleController', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe('delete', () => {
+    it('should return 401 when user is not authenticated', async () => {
+      const req: any = {
+        userContext: null,
+        params: { id: '1' },
+      };
+      const res = reply();
+      
+      await inmuebleController.delete(req, res as any);
+      
+      expect(res.statusCode).toBe(401);
+      expect(res.payload.message).toBe('No autenticado');
+    });
+
+    it('should return 400 when id is invalid', async () => {
+      const req: any = {
+        userContext: { id: 1 },
+        params: { id: 'invalid' },
+      };
+      const res = reply();
+      
+      await inmuebleController.delete(req, res as any);
+      
+      expect(res.statusCode).toBe(400);
+      expect(res.payload.message).toBe('ID de inmueble inválido');
+    });
+
+    it('should return 404 when inmueble is not found', async () => {
+      vi.mocked(deleteInmuebleService).mockResolvedValue({
+        error: { status: 404, message: 'Inmueble no encontrado o ya inactivo' }
+      });
+
+      const req: any = {
+        userContext: { id: 1 },
+        params: { id: '999' },
+      };
+      const res = reply();
+      
+      await inmuebleController.delete(req, res as any);
+      
+      expect(res.statusCode).toBe(404);
+      expect(res.payload.message).toBe('Inmueble no encontrado o ya inactivo');
+      expect(deleteInmuebleService).toHaveBeenCalledWith(1, 999);
+    });
+
+    it('should return 403 when user does not have permission', async () => {
+      vi.mocked(deleteInmuebleService).mockResolvedValue({
+        error: { status: 403, message: 'No tiene permisos para eliminar inmuebles' }
+      });
+
+      const req: any = {
+        userContext: { id: 1 },
+        params: { id: '1' },
+      };
+      const res = reply();
+      
+      await inmuebleController.delete(req, res as any);
+      
+      expect(res.statusCode).toBe(403);
+      expect(res.payload.message).toBe('No tiene permisos para eliminar inmuebles');
+      expect(deleteInmuebleService).toHaveBeenCalledWith(1, 1);
+    });
+
+    it('should successfully delete inmueble when user has permission', async () => {
+      vi.mocked(deleteInmuebleService).mockResolvedValue({
+        success: true
+      });
+
+      const req: any = {
+        userContext: { id: 1 },
+        params: { id: '1' },
+      };
+      const res = reply();
+      
+      await inmuebleController.delete(req, res as any);
+      
+      expect(res.statusCode).toBe(200);
+      expect(res.payload.data.success).toBe(true);
+      expect(res.payload.data.message).toBe('Inmueble eliminado correctamente');
+      expect(deleteInmuebleService).toHaveBeenCalledWith(1, 1);
+    });
   it('should return 401 for unauthenticated update request', async () => {
     const req: any = { 
       params: { id_inmueble: '1' },
