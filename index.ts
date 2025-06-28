@@ -7,6 +7,7 @@ import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import jwt from 'fastify-jwt';
 import { userRoutes } from './routes/user.routes';
+import { inmuebleRoutes } from './routes/inmueble.routes';
 import { errorHandler } from './middlewares/errorHandler';
 
 const server = fastify({ logger: true });
@@ -45,6 +46,7 @@ server.register(jwt, { secret: process.env.JWT_SECRET || 'changeme' });
 
 // Modular routes
 server.register(userRoutes, { prefix: '/users' });
+server.register(inmuebleRoutes, { prefix: '/inmuebles' });
 
 // Error handler
 server.setErrorHandler(errorHandler);
