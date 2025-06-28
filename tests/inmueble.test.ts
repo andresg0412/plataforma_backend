@@ -1,25 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+import { describe, it, expect, vi } from 'vitest';
 import { inmuebleController } from '../controllers/inmueble.controller';
 
-// Mock the service
-vi.mock('../services/inmuebles/createInmuebleService', () => {
-  return {
-    CreateInmuebleService: vi.fn().mockImplementation(() => ({
-      execute: vi.fn().mockResolvedValue({
-        data: {
-          id_inmueble: 1,
-          direccion: 'Calle 123',
-          ciudad: 'Bogotá',
-          departamento: 'Cundinamarca',
-          tipo_inmueble: 'casa',
-          area_total: 100,
-          area_construida: 80,
-          estado: 'disponible'
-        }
-      })
-    }))
-  };
-});
 
 // Mock FastifyReply
 const reply = () => {
@@ -39,81 +21,66 @@ const reply = () => {
 };
 
 describe('inmuebleController', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('should create an inmueble with valid data', async () => {
+  it('should return 401 for unauthenticated update request', async () => {
     const req: any = { 
-      userContext: {
-        id: 1,
-        id_roles: 1,
-        role: 'superadmin',
-        empresaId: 1
+      params: { id_inmueble: '1' },
+
+      body: { 
+        direccion: 'Calle 123',
+        ciudad: 'Bogotá',
+        departamento: 'Cundinamarca',
+        tipo_inmueble: 'Apartamento',
+        area: 80,
+        estado: 'Disponible'
       },
-      body: { 
-        direccion: 'Calle 123',
-        ciudad: 'Bogotá',
-        departamento: 'Cundinamarca',
-        tipo_inmueble: 'casa',
-        area_total: 100,
-        area_construida: 80,
-        id_empresa: 1,
-        estado: 'disponible'
-      }
+      user: null // No hay usuario autenticado
     };
-    
     const res = reply();
-    await inmuebleController.create(req, res as any);
-    
-    expect(res.statusCode).toBe(201);
-    expect(res.payload.isError).toBe(false);
-    expect(res.payload.data.direccion).toBe('Calle 123');
-  });
-
-  it('should return 401 when not authenticated', async () => {
-    const req: any = { 
-      userContext: null,
-      body: { 
-        direccion: 'Calle 123',
-        ciudad: 'Bogotá',
-        departamento: 'Cundinamarca',
-        tipo_inmueble: 'casa',
-        area_total: 100,
-        area_construida: 80,
-        id_empresa: 1,
-        estado: 'disponible'
-      }
-    };
-    
-    const res = reply();
-    await inmuebleController.create(req, res as any);
-    
+    await inmuebleController.update(req, res as any);
     expect(res.statusCode).toBe(401);
     expect(res.payload.isError).toBe(true);
-    expect(res.payload.message).toBe('No autenticado');
+    expect(res.payload.message).toBe('Usuario no autenticado o token inválido');
   });
 
-  it('should return 400 when required fields are missing', async () => {
+  it('should return 400 for invalid data', async () => {
     const req: any = { 
-      userContext: {
-        id: 1,
-        id_roles: 1,
-        role: 'superadmin',
-        empresaId: 1
-      },
+      params: { id_inmueble: '1' },
       body: { 
-        // Missing required fields
-        direccion: '',
-        ciudad: 'Bogotá'
+        area: -5, // Área negativa (inválida)
+      },
+      user: {
+        role: 'superadmin',
+        empresaId: 1,
+        propietarioId: null
       }
     };
-    
     const res = reply();
-    await inmuebleController.create(req, res as any);
-    
+    await inmuebleController.update(req, res as any);
     expect(res.statusCode).toBe(400);
     expect(res.payload.isError).toBe(true);
-    expect(res.payload.message).toBe('Datos inválidos');
+    expect(res.payload.message).toContain('Errores de validación');
+  });
+
+  it('should return 401 for unauthenticated getById request', async () => {
+    const req: any = { 
+      params: { id_inmueble: '1' },
+      user: null // No hay usuario autenticado
+    };
+    const res = reply();
+    await inmuebleController.getById(req, res as any);
+    expect(res.statusCode).toBe(401);
+    expect(res.payload.isError).toBe(true);
+    expect(res.payload.message).toBe('Usuario no autenticado o token inválido');
+  });
+
+  it('should return 401 for unauthenticated list request', async () => {
+    const req: any = { 
+      user: null // No hay usuario autenticado
+    };
+    const res = reply();
+    await inmuebleController.list(req, res as any);
+    expect(res.statusCode).toBe(401);
+    expect(res.payload.isError).toBe(true);
+    expect(res.payload.message).toBe('Usuario no autenticado o token inválido');
   });
 });

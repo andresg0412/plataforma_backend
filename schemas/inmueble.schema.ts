@@ -3,29 +3,34 @@ import { z } from 'zod';
 // Esquema basado en la tabla inmuebles de la base de datos
 export const InmuebleSchema = z.object({
   id_inmueble: z.number().optional(),
-  id_propietario: z.number().optional(),
-  id_empresa: z.number(),
-  direccion: z.string().min(1, 'La dirección es requerida'),
-  ciudad: z.string().min(1, 'La ciudad es requerida'),
-  departamento: z.string().min(1, 'El departamento es requerido'),
-  tipo_inmueble: z.enum(['casa', 'apartamento', 'local', 'oficina', 'bodega', 'lote'], {
-    errorMap: () => ({ message: 'Tipo de inmueble debe ser: casa, apartamento, local, oficina, bodega o lote' })
-  }),
-  numero_habitaciones: z.number().int().min(0).optional(),
-  numero_banos: z.number().int().min(0).optional(),
-  precio_arriendo: z.number().positive().optional(),
+  direccion: z.string().min(1, 'Dirección es requerida'),
+  ciudad: z.string().min(1, 'Ciudad es requerida'),
+  departamento: z.string().min(1, 'Departamento es requerido'),
+  tipo_inmueble: z.string().min(1, 'Tipo de inmueble es requerido'),
+  area: z.number().positive('El área debe ser un número positivo'),
+  precio_alquiler: z.number().positive().optional(),
+  precio_venta: z.number().positive().optional(),
+  estado: z.string().min(1, 'Estado es requerido'),
   descripcion: z.string().optional(),
-  estado: z.enum(['disponible', 'ocupado', 'mantenimiento'], {
-    errorMap: () => ({ message: 'Estado debe ser: disponible, ocupado o mantenimiento' })
-  }).default('disponible'),
+  id_propietario: z.number().positive('ID propietario es requerido'),
+  id_empresa: z.number().positive('ID empresa es requerido'),
+  creado_en: z.date().optional(),
+  actualizado_en: z.date().optional(),
 });
 
-export type InmuebleInput = z.infer<typeof InmuebleSchema>;
-
-// Esquema para query parameters del endpoint GET /inmuebles
-export const InmueblesQuerySchema = z.object({
-  id_empresa: z.string().regex(/^\d+$/).transform(Number).optional(),
+// Schema para actualización (todos los campos opcionales excepto validaciones básicas)
+export const InmuebleUpdateSchema = z.object({
+  direccion: z.string().min(1).optional(),
+  ciudad: z.string().min(1).optional(),
+  departamento: z.string().min(1).optional(),
+  tipo_inmueble: z.string().min(1).optional(),
+  area: z.number().positive().optional(),
+  precio_alquiler: z.number().positive().optional(),
+  precio_venta: z.number().positive().optional(),
+  estado: z.string().min(1).optional(),
+  descripcion: z.string().optional(),
+  id_propietario: z.number().positive().optional(),
+  id_empresa: z.number().positive().optional(),
 });
 
-export type Inmueble = z.infer<typeof InmuebleSchema>;
-export type InmueblesQuery = z.infer<typeof InmueblesQuerySchema>;
+export type InmuebleUpdate = z.infer<typeof InmuebleUpdateSchema>;
