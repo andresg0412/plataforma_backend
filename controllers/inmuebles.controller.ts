@@ -2,13 +2,10 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { successResponse, errorResponse } from '../libs/responseHelper';
 import { getInmueblesService } from '../services/inmuebles/getInmueblesService';
-
-interface InmueblesQueryParams {
-  id_empresa?: string;
-}
+import { InmueblesQuerySchema } from '../schemas/inmueble.schema';
 
 export const inmueblesController = {
-  list: async (req: FastifyRequest<{ Querystring: InmueblesQueryParams }>, reply: FastifyReply) => {
+  list: async (req: FastifyRequest, reply: FastifyReply) => {
     const ctx = req.userContext;
     
     // Verificar que el usuario esté autenticado
@@ -23,22 +20,22 @@ export const inmueblesController = {
     }
 
     try {
-      // Obtener el parámetro id_empresa del query string si existe
-      const idEmpresa = req.query.id_empresa ? parseInt(req.query.id_empresa, 10) : undefined;
-
-      // Validar que id_empresa sea un número válido si se proporciona
-      if (req.query.id_empresa && (isNaN(idEmpresa!) || idEmpresa! <= 0)) {
+      // Validar query parameters usando Zod schema
+      const queryValidation = InmueblesQuerySchema.safeParse(req.query);
+      if (!queryValidation.success) {
         return reply.status(400).send(
           errorResponse({ 
-            message: 'El parámetro id_empresa debe ser un número válido', 
+            message: 'Parámetros de consulta inválidos', 
             code: 400, 
-            error: 'Bad Request' 
+            error: queryValidation.error.errors 
           })
         );
       }
 
+      const { id_empresa } = queryValidation.data;
+
       // Llamar al servicio para obtener los inmuebles
-      const { data, error } = await getInmueblesService(ctx, idEmpresa);
+      const { data, error } = await getInmueblesService(ctx, id_empresa);
       
       if (error) {
         return reply.status(error.status || 500).send(
