@@ -6,14 +6,13 @@ export interface Inmueble {
   ciudad: string;
   departamento: string;
   tipo_inmueble: string; // 'casa', 'apartamento', 'local', 'oficina', etc.
-  area_total: number;
-  area_construida: number;
   numero_habitaciones?: number;
   numero_banos?: number;
   precio_arriendo?: number;
-  precio_venta?: number;
   descripcion?: string;
   estado: string; // 'disponible', 'ocupado', 'mantenimiento', etc.
-  creado_en?: Date;
-  actualizado_en?: Date;
+}
+
+export interface InmueblesQueryParams {
+  id_empresa?: number;
 }
