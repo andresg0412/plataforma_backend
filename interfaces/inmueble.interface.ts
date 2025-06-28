@@ -1,15 +1,16 @@
 export interface Inmueble {
-  id_inmueble: number;
-  direccion: string;
-  tipo?: string;
-  valor_arriendo?: number;
-  estado?: string;
-  id_empresa: number;
+  id_inmueble?: number;
   id_propietario?: number;
-  creado_en?: Date;
-  empresa_nombre?: string;
-  propietario_nombre?: string;
-  propietario_telefono?: string;
+  id_empresa: number;
+  direccion: string;
+  ciudad: string;
+  departamento: string;
+  tipo_inmueble: string; // 'casa', 'apartamento', 'local', 'oficina', etc.
+  numero_habitaciones?: number;
+  numero_banos?: number;
+  precio_arriendo?: number;
+  descripcion?: string;
+  estado: string; // 'disponible', 'ocupado', 'mantenimiento', etc.
 }
 
 export interface InmueblesQueryParams {

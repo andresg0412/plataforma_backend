@@ -1,19 +1,26 @@
 import { z } from 'zod';
 
-// Esquema para respuesta de inmuebles - basado en estructura de la base de datos
+// Esquema basado en la tabla inmuebles de la base de datos
 export const InmuebleSchema = z.object({
-  id_inmueble: z.number(),
-  direccion: z.string(),
-  tipo: z.string().optional(),
-  valor_arriendo: z.number().optional(),
-  estado: z.string().optional(),
-  id_empresa: z.number(),
+  id_inmueble: z.number().optional(),
   id_propietario: z.number().optional(),
-  creado_en: z.date().optional(),
-  empresa_nombre: z.string().optional(),
-  propietario_nombre: z.string().optional(),
-  propietario_telefono: z.string().optional(),
+  id_empresa: z.number(),
+  direccion: z.string().min(1, 'La dirección es requerida'),
+  ciudad: z.string().min(1, 'La ciudad es requerida'),
+  departamento: z.string().min(1, 'El departamento es requerido'),
+  tipo_inmueble: z.enum(['casa', 'apartamento', 'local', 'oficina', 'bodega', 'lote'], {
+    errorMap: () => ({ message: 'Tipo de inmueble debe ser: casa, apartamento, local, oficina, bodega o lote' })
+  }),
+  numero_habitaciones: z.number().int().min(0).optional(),
+  numero_banos: z.number().int().min(0).optional(),
+  precio_arriendo: z.number().positive().optional(),
+  descripcion: z.string().optional(),
+  estado: z.enum(['disponible', 'ocupado', 'mantenimiento'], {
+    errorMap: () => ({ message: 'Estado debe ser: disponible, ocupado o mantenimiento' })
+  }).default('disponible'),
 });
+
+export type InmuebleInput = z.infer<typeof InmuebleSchema>;
 
 // Esquema para query parameters del endpoint GET /inmuebles
 export const InmueblesQuerySchema = z.object({
