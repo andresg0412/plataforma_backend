@@ -11,4 +11,6 @@ export async function inmuebleRoutes(server: FastifyInstance, opts: FastifyPlugi
   
   // PUT /inmuebles/:id_inmueble - actualizar inmueble
   server.put('/:id_inmueble', { preHandler: [authMiddleware] }, inmuebleController.update);
+  // Crear inmueble - requiere autenticación
+  server.post('/', { preHandler: [authMiddleware] }, inmuebleController.create);
 }

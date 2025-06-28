@@ -14,3 +14,7 @@ export interface Inmueble {
   creado_en?: Date;
   actualizado_en?: Date;
 }
+
+export interface InmueblesQueryParams {
+  id_empresa?: number;
+}

@@ -1,5 +1,7 @@
+
 import { describe, it, expect, vi } from 'vitest';
 import { inmuebleController } from '../controllers/inmueble.controller';
+
 
 // Mock FastifyReply
 const reply = () => {
@@ -22,6 +24,7 @@ describe('inmuebleController', () => {
   it('should return 401 for unauthenticated update request', async () => {
     const req: any = { 
       params: { id_inmueble: '1' },
+
       body: { 
         direccion: 'Calle 123',
         ciudad: 'Bogotá',
