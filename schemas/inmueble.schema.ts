@@ -21,3 +21,19 @@ export const InmuebleSchema = z.object({
 export const InmuebleDeleteSchema = z.object({
   id_inmueble: z.string().regex(/^\d+$/, 'ID de inmueble debe ser un número válido').transform(Number),
 });
+// Schema para actualización (todos los campos opcionales excepto validaciones básicas)
+export const InmuebleUpdateSchema = z.object({
+  direccion: z.string().min(1).optional(),
+  ciudad: z.string().min(1).optional(),
+  departamento: z.string().min(1).optional(),
+  tipo_inmueble: z.string().min(1).optional(),
+  area: z.number().positive().optional(),
+  precio_alquiler: z.number().positive().optional(),
+  precio_venta: z.number().positive().optional(),
+  estado: z.string().min(1).optional(),
+  descripcion: z.string().optional(),
+  id_propietario: z.number().positive().optional(),
+  id_empresa: z.number().positive().optional(),
+});
+
+export type InmuebleUpdate = z.infer<typeof InmuebleUpdateSchema>;
