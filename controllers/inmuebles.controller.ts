@@ -33,9 +33,10 @@ export const inmueblesController = {
       }
 
       const { id_empresa } = queryValidation.data;
+      const idEmpresa = id_empresa ?? undefined;
 
       // Llamar al servicio para obtener los inmuebles
-      const { data, error } = await getInmueblesService(ctx, id_empresa);
+      const { data, error } = await getInmueblesService(ctx, idEmpresa);
       
       if (error) {
         return reply.status(error.status || 500).send(
