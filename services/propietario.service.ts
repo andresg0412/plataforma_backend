@@ -1,5 +1,5 @@
 import { PropietarioRepository } from '../repositories/propietario.repository';
-import { Propietario } from '../interfaces/propietario.interface';
+import { Propietario, CreatePropietarioRequest } from '../interfaces/propietario.interface';
 
 export class PropietarioService {
   private propietarioRepository: PropietarioRepository;
@@ -35,5 +35,12 @@ export class PropietarioService {
         } 
       };
     }
+  }
+
+  async createPropietario(loggedUserId: number, propietarioData: CreatePropietarioRequest) {
+    // Este método podría implementar lógica adicional si es necesario
+    // Por ahora delegamos al servicio específico
+    const { createPropietarioService } = await import('./propietarios/createPropietarioService');
+    return createPropietarioService(loggedUserId, propietarioData);
   }
 }

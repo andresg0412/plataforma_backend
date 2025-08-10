@@ -12,6 +12,17 @@ export interface Propietario {
   inmuebles: string[]; // Array de IDs de inmuebles
 }
 
+export interface CreatePropietarioRequest {
+  nombre: string;
+  apellido: string;
+  email: string;
+  telefono: string;
+  direccion: string;
+  cedula: string;
+  estado: 'activo' | 'inactivo';
+  id_empresa: number;
+}
+
 export interface GetPropietariosQuery {
   id_empresa?: number;
 }
