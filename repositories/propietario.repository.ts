@@ -175,4 +175,86 @@ export class PropietarioRepository {
       return { data: null, error };
     }
   }
+
+  async updateUsuario(id_usuario: number, userData: {
+    nombre?: string;
+    apellido?: string;
+    email?: string;
+    estado_activo?: boolean;
+    id_empresa?: number;
+  }) {
+    // Construir query dinámico solo con los campos a actualizar
+    const fields = Object.keys(userData).filter(key => userData[key as keyof typeof userData] !== undefined);
+    
+    if (fields.length === 0) {
+      return { data: null, error: new Error('No hay campos para actualizar') };
+    }
+
+    const setClause = fields.map((field, index) => `${field} = $${index + 1}`).join(', ');
+    const values: any[] = fields.map(field => userData[field as keyof typeof userData]);
+    values.push(id_usuario);
+
+    const query = `
+      UPDATE usuarios 
+      SET ${setClause}
+      WHERE id_usuario = $${fields.length + 1}
+      RETURNING *
+    `;
+
+    try {
+      const { rows } = await pool.query(query, values);
+      return { data: rows[0], error: null };
+    } catch (error: any) {
+      console.error('Error al actualizar usuario:', error);
+      return { data: null, error };
+    }
+  }
+
+  async updatePropietario(id_propietario: number, propietarioData: {
+    telefono?: string;
+    direccion?: string;
+  }) {
+    // Construir query dinámico solo con los campos a actualizar
+    const fields = Object.keys(propietarioData).filter(key => propietarioData[key as keyof typeof propietarioData] !== undefined);
+    
+    if (fields.length === 0) {
+      return { data: null, error: new Error('No hay campos para actualizar') };
+    }
+
+    const setClause = fields.map((field, index) => `${field} = $${index + 1}`).join(', ');
+    const values: any[] = fields.map(field => propietarioData[field as keyof typeof propietarioData]);
+    values.push(id_propietario);
+
+    const query = `
+      UPDATE propietarios 
+      SET ${setClause}
+      WHERE id_propietario = $${fields.length + 1}
+      RETURNING *
+    `;
+
+    try {
+      const { rows } = await pool.query(query, values);
+      return { data: rows[0], error: null };
+    } catch (error: any) {
+      console.error('Error al actualizar propietario:', error);
+      return { data: null, error };
+    }
+  }
+
+  async getPropietarioWithUserId(id_propietario: number) {
+    const query = `
+      SELECT p.id_propietario, p.id_usuario, u.id_empresa, u.id_roles
+      FROM propietarios p
+      LEFT JOIN usuarios u ON p.id_usuario = u.id_usuario
+      WHERE p.id_propietario = $1
+    `;
+
+    try {
+      const { rows } = await pool.query(query, [id_propietario]);
+      return { data: rows[0], error: null };
+    } catch (error: any) {
+      console.error('Error al obtener propietario con usuario:', error);
+      return { data: null, error };
+    }
+  }
 }

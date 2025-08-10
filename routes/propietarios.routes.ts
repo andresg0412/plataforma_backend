@@ -8,5 +8,7 @@ export async function propietariosRoutes(server: FastifyInstance, opts: FastifyP
   server.get('/getPropietarios', propietarioController.getPropietarios);
   // POST /api/propietarios/createPropietario
   server.post('/createPropietario', { preHandler: [authMiddleware] }, propietarioController.createPropietario);
-  //server.post('/createPropietario', propietarioController.createPropietario);
+  
+  // PUT /api/propietarios/editPropietario
+  server.put('/editPropietario', { preHandler: [authMiddleware] }, propietarioController.editPropietario);
 }

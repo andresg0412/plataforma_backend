@@ -23,6 +23,20 @@ export interface CreatePropietarioRequest {
   id_empresa: number;
 }
 
+export interface EditPropietarioRequest {
+  nombre?: string;
+  apellido?: string;
+  email?: string;
+  telefono?: string;
+  direccion?: string;
+  estado?: 'activo' | 'inactivo';
+  id_empresa?: number;
+}
+
+export interface EditPropietarioQuery {
+  id: number;
+}
+
 export interface GetPropietariosQuery {
   id_empresa?: number;
 }

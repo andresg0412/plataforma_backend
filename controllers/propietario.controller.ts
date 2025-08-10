@@ -3,7 +3,13 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 import { successResponse, errorResponse } from '../libs/responseHelper';
 import { getPropietariosService } from '../services/propietarios/getPropietariosService';
 import { createPropietarioService } from '../services/propietarios/createPropietarioService';
-import { GetPropietariosQuerySchema, CreatePropietarioSchema } from '../schemas/propietario.schema';
+import { editPropietarioService } from '../services/propietarios/editPropietarioService';
+import { 
+  GetPropietariosQuerySchema, 
+  CreatePropietarioSchema, 
+  EditPropietarioSchema,
+  EditPropietarioQuerySchema 
+} from '../schemas/propietario.schema';
 
 export const propietarioController = {
   getPropietarios: async (req: FastifyRequest, reply: FastifyReply) => {
@@ -112,6 +118,93 @@ export const propietarioController = {
       
     } catch (err) {
       console.error('Error inesperado en createPropietario:', err);
+      return reply.status(500).send(
+        errorResponse({ 
+          message: 'Error interno del servidor', 
+          code: 500, 
+          error: err 
+        })
+      );
+    }
+  },
+
+  editPropietario: async (req: FastifyRequest, reply: FastifyReply) => {
+    try {
+      // Verificar autenticación
+      const ctx = req.userContext;
+      if (!ctx || !ctx.id) {
+        return reply.status(401).send(
+          errorResponse({ 
+            message: 'No autenticado', 
+            code: 401, 
+            error: 'Unauthorized' 
+          })
+        );
+      }
+
+      // Validar query parameters (id del propietario)
+      const queryValidation = EditPropietarioQuerySchema.safeParse({
+        id: parseInt((req.query as any)?.id)
+      });
+      
+      if (!queryValidation.success) {
+        console.error('Error al validar query params:', queryValidation.error);
+        return reply.status(400).send(
+          errorResponse({ 
+            message: 'ID de propietario inválido', 
+            code: 400, 
+            error: queryValidation.error 
+          })
+        );
+      }
+
+      // Validar datos del body
+      const bodyValidation = EditPropietarioSchema.safeParse(req.body);
+      
+      if (!bodyValidation.success) {
+        console.error('Error al validar datos del propietario:', bodyValidation.error);
+        return reply.status(400).send(
+          errorResponse({ 
+            message: 'Datos de propietario inválidos', 
+            code: 400, 
+            error: bodyValidation.error 
+          })
+        );
+      }
+
+      const { id: propietarioId } = queryValidation.data;
+      const propietarioData = bodyValidation.data;
+
+      console.log('Editando propietario:', { 
+        propietarioId,
+        email: propietarioData.email, 
+        nombre: propietarioData.nombre,
+        id_empresa: propietarioData.id_empresa 
+      });
+      
+      // Llamar al servicio
+      const { data, error } = await editPropietarioService(
+        Number(ctx.id), 
+        propietarioId, 
+        propietarioData
+      );
+      
+      if (error) {
+        console.error('Error al editar propietario:', error);
+        return reply.status(error.status || 500).send(
+          errorResponse({ 
+            message: error.message, 
+            code: error.status || 500, 
+            error: error.details 
+          })
+        );
+      }
+
+      console.log('Propietario editado exitosamente:', data?.id);
+      return reply.send(successResponse(data));
+      
+    } catch (err) {
+      console.error('Error inesperado en editPropietario:', err);
       return reply.status(500).send(
         errorResponse({ 
           message: 'Error interno del servidor', 
