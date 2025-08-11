@@ -3,6 +3,18 @@ import { inmueblesController } from '../controllers/inmuebles.controller';
 import { authMiddleware } from '../middlewares/authMiddleware';
 
 export async function inmueblesRoutes(server: FastifyInstance, opts: FastifyPluginOptions) {
-  // GET /inmuebles - Obtener lista de inmuebles según permisos del usuario (requiere autenticación)
+  // GET /inmuebles/getInmuebles - Obtener lista de inmuebles o inmueble específico
+  server.get('/getInmuebles', { preHandler: [authMiddleware] }, inmueblesController.getInmuebles);
+  
+  // POST /inmuebles/createInmueble - Crear un nuevo inmueble
+  server.post('/createInmueble', { preHandler: [authMiddleware] }, inmueblesController.createInmueble);
+  
+  // PUT /inmuebles/editInmueble - Editar un inmueble existente
+  server.put('/editInmueble', { preHandler: [authMiddleware] }, inmueblesController.editInmueble);
+  
+  // DELETE /inmuebles/deleteInmueble - Eliminar un inmueble (eliminación lógica)
+  server.delete('/deleteInmueble', { preHandler: [authMiddleware] }, inmueblesController.deleteInmueble);
+
+  // Mantener compatibilidad con el endpoint anterior
   server.get('/', { preHandler: [authMiddleware] }, inmueblesController.list);
 }

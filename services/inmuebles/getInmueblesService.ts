@@ -7,6 +7,7 @@ const inmueblesRepository = new InmueblesRepository();
  * Obtiene los inmuebles visibles para el usuario autenticado según su rol y permisos.
  * @param userContext - Contexto del usuario autenticado
  * @param idEmpresa - ID de empresa opcional del query parameter
+ * @param idInmueble - ID de inmueble específico opcional
  * @returns lista de inmuebles visibles o error
  */
 export async function getInmueblesService(
@@ -16,9 +17,52 @@ export async function getInmueblesService(
     role: string;
     empresaId: number | null;
   },
-  idEmpresa?: number
+  idEmpresa?: number,
+  idInmueble?: number
 ) {
   try {
+    // Si se solicita un inmueble específico por ID
+    if (idInmueble) {
+      const { data: inmueble, error } = await inmueblesRepository.getInmuebleById(idInmueble);
+      
+      if (error) {
+        return { data: null, error: { status: 500, message: 'Error al obtener el inmueble', details: error } };
+      }
+
+      if (!inmueble) {
+        return { data: null, error: { status: 404, message: 'Inmueble no encontrado', details: null } };
+      }
+
+      // Verificar permisos para ver este inmueble específico
+      if (userContext.id_roles === ROLES.SUPERADMIN) {
+        // Superadmin puede ver cualquier inmueble
+        return { data: inmueble, error: null };
+      }
+
+      if (userContext.id_roles === ROLES.EMPRESA || userContext.id_roles === ROLES.ADMINISTRADOR) {
+        // Verificar que el inmueble pertenezca a su empresa
+        if (inmueble.id_empresa !== userContext.empresaId) {
+          return { data: null, error: { status: 403, message: 'No tiene permisos para ver este inmueble', details: null } };
+        }
+        return { data: inmueble, error: null };
+      }
+
+      if (userContext.id_roles === ROLES.PROPIETARIO) {
+        // Verificar que el inmueble pertenezca al propietario y a su empresa
+        const { data: propietarioId, error: propError } = await inmueblesRepository.getPropietarioIdByUserId(userContext.id);
+        if (propError || !propietarioId) {
+          return { data: null, error: { status: 403, message: 'Usuario no está registrado como propietario', details: propError } };
+        }
+
+        if (inmueble.id_empresa !== userContext.empresaId || inmueble.id_propietario !== propietarioId) {
+          return { data: null, error: { status: 403, message: 'No tiene permisos para ver este inmueble', details: null } };
+        }
+        return { data: inmueble, error: null };
+      }
+
+      return { data: null, error: { status: 403, message: 'Rol no autorizado', details: null } };
+    }
+
     // Superadmin: puede ver todos los inmuebles o filtrar por empresa
     if (userContext.id_roles === ROLES.SUPERADMIN) {
       if (idEmpresa) {
