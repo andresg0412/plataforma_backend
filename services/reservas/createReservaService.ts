@@ -1,0 +1,121 @@
+import { ReservasRepository } from '../../repositories/reservas.repository';
+import { CreateReservaRequest, Reserva } from '../../interfaces/reserva.interface';
+import { GetReservasService } from './getReservasService';
+import { HuespedesService } from './huespedesService';
+
+export class CreateReservaService {
+  private reservasRepository: ReservasRepository;
+  private getReservasService: GetReservasService;
+  private huespedesService: HuespedesService;
+
+  constructor() {
+    this.reservasRepository = new ReservasRepository();
+    this.getReservasService = new GetReservasService();
+    this.huespedesService = new HuespedesService();
+  }
+
+  /**
+   * Valida que las fechas sean coherentes
+   */
+  private validateDates(fechaEntrada: string, fechaSalida: string): void {
+    const entrada = new Date(fechaEntrada);
+    const salida = new Date(fechaSalida);
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0); // Resetear hora para comparar solo fechas
+
+    if (entrada >= salida) {
+      throw new Error('La fecha de entrada debe ser anterior a la fecha de salida');
+    }
+
+    if (entrada < hoy) {
+      throw new Error('La fecha de entrada no puede ser anterior a hoy');
+    }
+  }
+
+  /**
+   * Valida que el precio sea válido
+   */
+  private validatePrecio(precio: number): void {
+    if (precio <= 0) {
+      throw new Error('El precio total debe ser mayor a 0');
+    }
+  }
+
+  /**
+   * Valida que el número de huéspedes sea válido
+   */
+  private validateNumeroHuespedes(numero: number): void {
+    if (numero < 1 || numero > 20) { // Límite razonable
+      throw new Error('El número de huéspedes debe estar entre 1 y 20');
+    }
+  }
+
+  /**
+   * Servicio principal para crear una reserva con múltiples huéspedes
+   */
+  async execute(requestData: CreateReservaRequest): Promise<Reserva> {
+    try {
+      // 1. Validaciones básicas de reserva
+      this.validateDates(requestData.fecha_entrada, requestData.fecha_salida);
+      this.validatePrecio(requestData.precio_total);
+      this.validateNumeroHuespedes(requestData.numero_huespedes);
+
+      // 2. Procesar huéspedes (validar, buscar existentes, crear nuevos)
+      const huespedesProcessados = await this.huespedesService.processHuespedes(
+        requestData.numero_huespedes,
+        requestData.huespedes
+      );
+
+      // 3. Generar código de reserva único
+      const codigoReserva = await this.reservasRepository.generateNextCodigoReserva();
+
+      // 4. Crear la reserva
+      const nuevaReserva = await this.reservasRepository.createReserva({
+        id_inmueble: requestData.id_inmueble,
+        fecha_entrada: requestData.fecha_entrada,
+        fecha_salida: requestData.fecha_salida,
+        estado: requestData.estado,
+        codigo_reserva: codigoReserva,
+        precio_total: requestData.precio_total,
+        observaciones: requestData.observaciones,
+        numero_huespedes: requestData.numero_huespedes
+      });
+
+      // 5. Relacionar todos los huéspedes con la reserva
+      await this.huespedesService.linkHuespedesConReserva(
+        nuevaReserva.id,
+        huespedesProcessados.map(h => ({
+          id: h.id,
+          esPrincipal: h.esPrincipal
+        }))
+      );
+
+      // 6. Obtener la reserva completa para retornar
+      const reservaCompleta = await this.getReservasService.execute({});
+      const reservaCreada = reservaCompleta.find(r => r.id === nuevaReserva.id);
+
+      if (!reservaCreada) {
+        throw new Error('Error al recuperar la reserva creada');
+      }
+
+      return reservaCreada;
+    } catch (error) {
+      console.error('Error en CreateReservaService:', error);
+      
+      // Re-lanzar errores de validación con el mensaje original
+      if (error instanceof Error && (
+          error.message.includes('fecha') || 
+          error.message.includes('email') ||
+          error.message.includes('precio') ||
+          error.message.includes('huéspedes') ||
+          error.message.includes('principal') ||
+          error.message.includes('documento') ||
+          error.message.includes('nacimiento'))) {
+        throw error;
+      }
+      
+      // Para otros errores, usar mensaje genérico
+      throw new Error('Error interno del servidor al crear la reserva');
+    }
+  }
+}

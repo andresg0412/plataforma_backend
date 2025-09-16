@@ -1,0 +1,229 @@
+import { FastifySchema } from 'fastify';
+
+export const getReservasSchema: FastifySchema = {
+  querystring: {
+    type: 'object',
+    properties: {
+      id_empresa: { type: 'number' },
+      estado: { type: 'string' },
+      fecha_inicio: { type: 'string', format: 'date' },
+      fecha_fin: { type: 'string', format: 'date' }
+    }
+  },
+  response: {
+    200: {
+      type: 'object',
+      properties: {
+        isError: { type: 'boolean' },
+        data: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'number' },
+              codigo_reserva: { type: 'string' },
+              id_inmueble: { type: 'number' },
+              nombre_inmueble: { type: 'string' },
+              huesped_principal: {
+                type: 'object',
+                properties: {
+                  nombre: { type: 'string' },
+                  apellido: { type: 'string' },
+                  email: { type: 'string' },
+                  telefono: { type: 'string' }
+                }
+              },
+              fecha_entrada: { type: 'string' },
+              fecha_salida: { type: 'string' },
+              numero_huespedes: { type: 'number' },
+              huespedes: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'number' },
+                    nombre: { type: 'string' },
+                    apellido: { type: 'string' },
+                    email: { type: 'string' },
+                    telefono: { type: 'string' },
+                    documento_tipo: { type: 'string' },
+                    documento_numero: { type: 'string' },
+                    fecha_nacimiento: { type: 'string' },
+                    es_principal: { type: 'boolean' },
+                    id_reserva: { type: 'number' }
+                  }
+                }
+              },
+              precio_total: { type: 'number' },
+              estado: { type: 'string' },
+              fecha_creacion: { type: 'string' },
+              observaciones: { type: 'string' },
+              id_empresa: { type: 'number' }
+            }
+          }
+        },
+        message: { type: 'string' }
+      }
+    }
+  }
+};
+
+export const createReservaSchema: FastifySchema = {
+  body: {
+    type: 'object',
+    required: [
+      'id_inmueble',
+      'fecha_entrada',
+      'fecha_salida',
+      'numero_huespedes',
+      'huespedes',
+      'precio_total',
+      'estado',
+      'id_empresa'
+    ],
+    properties: {
+      id_inmueble: { type: 'number' },
+      fecha_entrada: { type: 'string', format: 'date' },
+      fecha_salida: { type: 'string', format: 'date' },
+      numero_huespedes: { type: 'number', minimum: 1 },
+      huespedes: {
+        type: 'array',
+        minItems: 1,
+        items: {
+          type: 'object',
+          required: [
+            'nombre',
+            'apellido', 
+            'email',
+            'telefono',
+            'documento_tipo',
+            'documento_numero',
+            'fecha_nacimiento',
+            'es_principal'
+          ],
+          properties: {
+            nombre: { type: 'string', minLength: 1 },
+            apellido: { type: 'string', minLength: 1 },
+            email: { type: 'string', format: 'email' },
+            telefono: { type: 'string', minLength: 1 },
+            documento_tipo: { type: 'string', minLength: 1 },
+            documento_numero: { type: 'string', minLength: 1 },
+            fecha_nacimiento: { type: 'string', format: 'date' },
+            es_principal: { type: 'boolean' }
+          }
+        }
+      },
+      precio_total: { type: 'number', minimum: 0 },
+      estado: { type: 'string', enum: ['pendiente', 'confirmada', 'cancelada', 'finalizada'] },
+      observaciones: { type: 'string' },
+      id_empresa: { type: 'number' }
+    }
+  },
+  response: {
+    201: {
+      type: 'object',
+      properties: {
+        isError: { type: 'boolean' },
+        data: {
+          type: 'object',
+          properties: {
+            id: { type: 'number' },
+            codigo_reserva: { type: 'string' },
+            id_inmueble: { type: 'number' },
+            nombre_inmueble: { type: 'string' },
+            huesped_principal: {
+              type: 'object',
+              properties: {
+                nombre: { type: 'string' },
+                apellido: { type: 'string' },
+                email: { type: 'string' },
+                telefono: { type: 'string' }
+              }
+            },
+            fecha_entrada: { type: 'string' },
+            fecha_salida: { type: 'string' },
+            numero_huespedes: { type: 'number' },
+            huespedes: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'number' },
+                  nombre: { type: 'string' },
+                  apellido: { type: 'string' },
+                  email: { type: 'string' },
+                  telefono: { type: 'string' },
+                  documento_tipo: { type: 'string' },
+                  documento_numero: { type: 'string' },
+                  fecha_nacimiento: { type: 'string' },
+                  es_principal: { type: 'boolean' },
+                  id_reserva: { type: 'number' }
+                }
+              }
+            },
+            precio_total: { type: 'number' },
+            estado: { type: 'string' },
+            fecha_creacion: { type: 'string' },
+            observaciones: { type: 'string' },
+            id_empresa: { type: 'number' }
+          }
+        },
+        message: { type: 'string' }
+      }
+    }
+  }
+};
+
+export const editReservaSchema: FastifySchema = {
+  body: {
+    type: 'object',
+    minProperties: 1,
+    properties: {
+      fecha_entrada: { type: 'string', format: 'date' },
+      fecha_salida: { type: 'string', format: 'date' },
+      numero_huespedes: { type: 'number', minimum: 1 },
+      huespedes: {
+        type: 'array',
+        minItems: 1,
+        items: {
+          type: 'object',
+          required: [
+            'nombre',
+            'apellido',
+            'email',
+            'telefono',
+            'documento_tipo',
+            'documento_numero',
+            'fecha_nacimiento',
+            'es_principal'
+          ],
+          properties: {
+            nombre: { type: 'string', minLength: 1 },
+            apellido: { type: 'string', minLength: 1 },
+            email: { type: 'string', format: 'email' },
+            telefono: { type: 'string', minLength: 1 },
+            documento_tipo: { type: 'string', minLength: 1 },
+            documento_numero: { type: 'string', minLength: 1 },
+            fecha_nacimiento: { type: 'string', format: 'date' },
+            es_principal: { type: 'boolean' }
+          }
+        }
+      },
+      precio_total: { type: 'number', minimum: 0 },
+      estado: { type: 'string', enum: ['pendiente', 'confirmada', 'cancelada', 'finalizada'] },
+      observaciones: { type: 'string' },
+      id_empresa: { type: 'number' }
+    },
+    additionalProperties: false
+  },
+  response: {
+    200: {
+      type: 'object',
+      properties: {
+        isError: { type: 'boolean' },
+        data: { type: 'object' },
+        message: { type: 'string' }
+      }
+    }
+  }
+};
