@@ -6,11 +6,13 @@ import env from '@fastify/env';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import jwt from 'fastify-jwt';
+
 import { userRoutes } from './routes/user.routes';
 import { empresasRoutes } from './routes/empresas.routes';
 import { inmueblesRoutes } from './routes/inmuebles.routes';
 import { propietariosRoutes } from './routes/propietarios.routes';
 import { reservasRoutes } from './routes/reservas.routes';
+import { disponibilidadRoutes } from './routes/disponibilidad.routes';
 import { errorHandler } from './middlewares/errorHandler';
 
 const server = fastify({ logger: true });
@@ -50,6 +52,8 @@ server.register(swaggerUi, {
 server.register(jwt, { secret: process.env.JWT_SECRET || 'changeme' });
 
 // Modular routes
+
+server.register(disponibilidadRoutes, { prefix: '/disponibilidad' });
 server.register(userRoutes, { prefix: '/users' });
 server.register(empresasRoutes, { prefix: '/empresas' });
 server.register(inmueblesRoutes, { prefix: '/inmuebles' });
