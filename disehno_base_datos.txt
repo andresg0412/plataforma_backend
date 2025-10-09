@@ -1,0 +1,234 @@
+-- Tablas base
+CREATE TABLE public.empresas (
+  id_empresa SERIAL PRIMARY KEY,
+  nombre character varying NOT NULL,
+  plan_actual character varying,
+  fecha_inicio timestamp without time zone DEFAULT now(),
+  fecha_fin timestamp without time zone,
+  estado character varying DEFAULT 'activa'
+);
+
+CREATE TABLE public.roles (
+  id_rol SERIAL PRIMARY KEY,
+  name character varying NOT NULL UNIQUE
+);
+
+CREATE TABLE public.permissions (
+  id_permission SERIAL PRIMARY KEY,
+  key character varying NOT NULL UNIQUE,
+  description text NOT NULL
+);
+
+-- Usuarios (depende de roles y empresas)
+CREATE TABLE public.usuarios (
+  id_usuario SERIAL PRIMARY KEY,
+  nombre character varying NOT NULL,
+  email character varying NOT NULL UNIQUE,
+  cedula varchar(20) UNIQUE,
+  apellido varchar(20),
+  username varchar(20) UNIQUE,
+  password_hash text NOT NULL,
+  id_roles integer,
+  id_empresa integer,
+  creado_en timestamp without time zone DEFAULT now(),
+  estado_activo boolean default true,
+  CONSTRAINT usuarios_rol_id_fkey FOREIGN KEY (id_roles) REFERENCES public.roles(id_rol),
+  CONSTRAINT usuarios_empresa_id_fkey FOREIGN KEY (id_empresa) REFERENCES public.empresas(id_empresa)
+);
+
+-- Propietarios (depende de usuarios)
+CREATE TABLE public.propietarios (
+  id_propietario SERIAL PRIMARY KEY,
+  id_usuario integer UNIQUE,
+  telefono character varying,
+  direccion text,
+  CONSTRAINT propietarios_usuario_id_fkey FOREIGN KEY (id_usuario) REFERENCES public.usuarios(id_usuario)
+);
+
+-- Inmuebles (depende de empresas y propietarios)
+CREATE TABLE public.inmuebles (
+  id_inmueble SERIAL PRIMARY KEY,
+  nombre character varying,
+  descripcion text,
+  direccion text,
+  capacidad integer,
+  id_propietario integer,
+  id_empresa integer,
+  estado character varying DEFAULT 'activo',
+  CONSTRAINT inmuebles_propietario_id_fkey FOREIGN KEY (id_propietario) REFERENCES public.propietarios(id_propietario),
+  CONSTRAINT inmuebles_empresa_id_fkey FOREIGN KEY (id_empresa) REFERENCES public.empresas(id_empresa)
+);
+
+-- Reservas (depende de inmuebles)
+CREATE TABLE public.reservas (
+  id_reserva SERIAL PRIMARY KEY,
+  id_inmueble integer,
+  fecha_inicio date NOT NULL,
+  fecha_fin date NOT NULL,
+  estado character varying,
+  created_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT reservas_inmueble_id_fkey FOREIGN KEY (id_inmueble) REFERENCES public.inmuebles(id_inmueble)
+);
+
+-- Huespedes
+CREATE TABLE public.huespedes (
+  id_huesped SERIAL PRIMARY KEY,
+  nombre character varying,
+  documento_identidad character varying,
+  telefono character varying,
+  correo character varying
+);
+
+-- Huespedes_Reservas (depende de reservas y huespedes)
+CREATE TABLE public.huespedes_reservas (
+  id_reserva integer NOT NULL,
+  id_huesped integer NOT NULL,
+  es_principal boolean DEFAULT false,
+  CONSTRAINT huespedes_reservas_pkey PRIMARY KEY (id_reserva, id_huesped),
+  CONSTRAINT huespedes_reservas_reserva_id_fkey FOREIGN KEY (id_reserva) REFERENCES public.reservas(id_reserva),
+  CONSTRAINT huespedes_reservas_huesped_id_fkey FOREIGN KEY (id_huesped) REFERENCES public.huespedes(id_huesped)
+);
+
+-- Ingresos y Egresos (depende de reservas e inmuebles)
+CREATE TABLE public.ingresos (
+  id_ingreso SERIAL PRIMARY KEY,
+  id_inmueble integer,
+  id_reserva integer,
+  monto numeric,
+  descripcion text,
+  fecha date NOT NULL,
+  CONSTRAINT ingresos_inmueble_id_fkey FOREIGN KEY (id_inmueble) REFERENCES public.inmuebles(id_inmueble),
+  CONSTRAINT ingresos_reserva_id_fkey FOREIGN KEY (id_reserva) REFERENCES public.reservas(id_reserva)
+);
+
+CREATE TABLE public.egresos (
+  id_egreso SERIAL PRIMARY KEY,
+  id_inmueble integer,
+  monto numeric,
+  descripcion text,
+  categoria character varying,
+  fecha date NOT NULL,
+  CONSTRAINT egresos_inmueble_id_fkey FOREIGN KEY (id_inmueble) REFERENCES public.inmuebles(id_inmueble)
+);
+
+-- Administradores de inmuebles
+CREATE TABLE public.administradores_inmuebles (
+  id_usuario integer NOT NULL,
+  id_inmueble integer NOT NULL,
+  CONSTRAINT administradores_inmuebles_pkey PRIMARY KEY (id_usuario, id_inmueble),
+  CONSTRAINT administradores_inmuebles_usuario_id_fkey FOREIGN KEY (id_usuario) REFERENCES public.usuarios(id_usuario),
+  CONSTRAINT administradores_inmuebles_inmueble_id_fkey FOREIGN KEY (id_inmueble) REFERENCES public.inmuebles(id_inmueble)
+);
+
+-- Roles - Permissions (tabla pivote)
+CREATE TABLE public.roles_permissions (
+  id_rol integer NOT NULL,
+  id_permission integer NOT NULL,
+  CONSTRAINT roles_permissions_pkey PRIMARY KEY (id_rol, id_permission),
+  CONSTRAINT roles_permissions_role_id_fkey FOREIGN KEY (id_rol) REFERENCES public.roles(id_rol),
+  CONSTRAINT roles_permissions_permission_id_fkey FOREIGN KEY (id_permission) REFERENCES public.permissions(id_permission)
+);
+
+
+
+insert into roles (name) values ('superadmin'), ('empresa'),('administrador'),('propietario');
+-- Usuario administrador independiente
+INSERT INTO usuarios (nombre, email, password_hash, id_roles, id_empresa)
+VALUES ('Carlos Torres', 'carlos@adminind.com', 'hashed_pw_1', 3, NULL);
+
+-- Propietarios (dueños de los inmuebles)
+INSERT INTO usuarios (nombre, email, password_hash, id_roles)
+VALUES 
+  ('Ana Propietaria', 'ana@prop.com', 'hashed_pw_2', 4),
+  ('Luis Dueño', 'luis@prop.com', 'hashed_pw_3', 4);
+
+-- Registros en tabla propietarios
+INSERT INTO propietarios (id_usuario, telefono)
+VALUES 
+  (2, '3001230001'),
+  (3, '3001230002');
+-- Inmuebles administrados por Carlos, pero con distintos propietarios
+INSERT INTO inmuebles (nombre, direccion, id_propietario, id_empresa)
+VALUES 
+  ('Apartamento Ana', 'Calle 1 #123', 1, NULL),
+  ('Casa Luis', 'Carrera 5 #456', 2, NULL);
+
+-- Relación de Carlos como administrador de ambos inmuebles
+INSERT INTO administradores_inmuebles (id_usuario, id_inmueble)
+VALUES 
+  (1, 3),
+  (1, 4);
+
+-- Usuario administrador independiente
+INSERT INTO usuarios (nombre, email, password_hash, id_roles, id_empresa)
+VALUES ('superadmin', 'admin@mail.com', 'hashed_pw_1', 1, NULL);
+
+INSERT INTO permissions (key, description) VALUES
+('ver_dashboard', 'Ver panel principal'),
+('ver_inmuebles', 'Ver lista de inmuebles'),
+('crear_inmueble', 'Crear un nuevo inmueble'),
+('editar_inmueble', 'Editar inmuebles'),
+('eliminar_inmueble', 'Eliminar inmuebles'),
+('ver_reservas', 'Ver reservas'),
+('crear_reserva', 'Crear nueva reserva'),
+('editar_reserva', 'Editar reservas'),
+('eliminar_reserva', 'Eliminar reservas'),
+('ver_reportes', 'Ver reportes financieros'),
+('ver_usuarios', 'Ver y gestionar usuarios'),
+('ver_caja', 'Ver caja e ingresos/egresos'),
+('ver_propietarios', 'Ver información de propietarios');
+
+INSERT INTO permissions (key, description) VALUES
+('ver_disponibilidad', 'Ver disponibilidad'),
+('ver_huespedes', 'Ver huespedes');
+
+-- SUPERUSUARIO: acceso total
+INSERT INTO roles_permissions (id_rol, id_permission)
+SELECT 1, id_permission FROM permissions;
+
+INSERT INTO roles_permissions (id_rol, id_permission) VALUES (1, 18);
+
+-- ADMINISTRADOR
+INSERT INTO roles_permissions (id_rol, id_permission)
+SELECT 3, id_permission FROM permissions
+WHERE key IN (
+    'ver_dashboard',
+    'ver_inmuebles', 'crear_inmueble', 'editar_inmueble',
+    'ver_reservas', 'crear_reserva', 'editar_reserva',
+    'ver_reportes', 'ver_caja', 'ver_propietarios'
+);
+
+-- PROPIETARIO
+INSERT INTO roles_permissions (id_rol, id_permission)
+SELECT 4, id_permission FROM permissions
+WHERE key IN (
+    'ver_dashboard',
+    'ver_inmuebles',
+    'ver_reservas',
+    'ver_reportes'
+);
+
+ALTER TABLE inmuebles add column edificio VARCHAR(100);
+ALTER TABLE inmuebles add column comision VARCHAR(10);
+ALTER TABLE inmuebles add column precio_limpieza VARCHAR(10);
+ALTER TABLE inmuebles add column apartamento VARCHAR(10);
+ALTER TABLE inmuebles add column id_prod_sigo VARCHAR(10);
+ALTER TABLE inmuebles add column capacidad_maxima INTEGER;
+ALTER TABLE inmuebles add column nro_habitaciones INTEGER;
+ALTER TABLE inmuebles add column nro_bahnos INTEGER;
+ALTER TABLE inmuebles add column cocina BOOLEAN;
+
+
+
+ALTER TABLE reservas ADD COLUMN codigo_reserva VARCHAR(20);
+ALTER TABLE reservas ADD COLUMN precio_total NUMERIC(10,2);
+ALTER TABLE reservas ADD COLUMN observaciones TEXT;
+ALTER TABLE reservas ADD COLUMN numero_huespedes INTEGER;
+
+
+
+ALTER TABLE huespedes ADD COLUMN apellido VARCHAR(100);
+ALTER TABLE huespedes ADD COLUMN email VARCHAR(255);
+ALTER TABLE huespedes ADD COLUMN fecha_nacimiento DATE;
+ALTER TABLE huespedes ADD COLUMN documento_tipo VARCHAR(50);
+ALTER TABLE huespedes ADD COLUMN documento_numero VARCHAR(50);
