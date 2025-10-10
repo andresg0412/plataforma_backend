@@ -55,6 +55,9 @@ export const getReservasSchema: FastifySchema = {
                 }
               },
               precio_total: { type: 'number' },
+              total_reserva: { type: 'number' },
+              total_pagado: { type: 'number' },
+              total_pendiente: { type: 'number' },
               estado: { type: 'string' },
               fecha_creacion: { type: 'string' },
               observaciones: { type: 'string' },
@@ -78,6 +81,7 @@ export const createReservaSchema: FastifySchema = {
       'numero_huespedes',
       'huespedes',
       'precio_total',
+      'total_reserva',
       'estado',
       'id_empresa'
     ],
@@ -114,6 +118,8 @@ export const createReservaSchema: FastifySchema = {
         }
       },
       precio_total: { type: 'number', minimum: 0 },
+      total_reserva: { type: 'number', minimum: 0 },
+      total_pagado: { type: 'number', minimum: 0 },
       estado: { type: 'string', enum: ['pendiente', 'confirmada', 'cancelada', 'finalizada'] },
       observaciones: { type: 'string' },
       id_empresa: { type: 'number' }
@@ -162,6 +168,9 @@ export const createReservaSchema: FastifySchema = {
               }
             },
             precio_total: { type: 'number' },
+            total_reserva: { type: 'number' },
+            total_pagado: { type: 'number' },
+            total_pendiente: { type: 'number' },
             estado: { type: 'string' },
             fecha_creacion: { type: 'string' },
             observaciones: { type: 'string' },
@@ -210,6 +219,8 @@ export const editReservaSchema: FastifySchema = {
         }
       },
       precio_total: { type: 'number', minimum: 0 },
+      total_reserva: { type: 'number', minimum: 0 },
+      total_pagado: { type: 'number', minimum: 0 },
       estado: { type: 'string', enum: ['pendiente', 'confirmada', 'cancelada', 'finalizada'] },
       observaciones: { type: 'string' },
       id_empresa: { type: 'number' }

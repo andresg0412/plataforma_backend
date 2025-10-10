@@ -29,6 +29,10 @@ export interface Reserva {
   numero_huespedes: number;
   huespedes: Huesped[];
   precio_total: number;
+  // Nuevos campos financieros
+  total_reserva: number;
+  total_pagado: number;
+  total_pendiente: number;
   estado: string;
   fecha_creacion: string;
   observaciones: string;
@@ -66,6 +70,9 @@ export interface CreateReservaRequest {
   numero_huespedes: number;
   huespedes: CreateHuespedData[];
   precio_total: number;
+  // Nuevos campos financieros
+  total_reserva: number;
+  total_pagado?: number; // Opcional, por defecto 0
   estado: string;
   observaciones?: string;
   id_empresa: number;
@@ -83,6 +90,9 @@ export interface EditReservaRequest {
   numero_huespedes?: number;
   huespedes?: CreateHuespedData[];
   precio_total?: number;
+  // Nuevos campos financieros
+  total_reserva?: number;
+  total_pagado?: number;
   estado?: string;
   observaciones?: string;
   id_empresa?: number;

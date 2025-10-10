@@ -42,6 +42,25 @@ export class CreateReservaService {
   }
 
   /**
+   * Valida los campos financieros
+   */
+  private validateCamposFinancieros(totalReserva: number, totalPagado?: number): void {
+    if (totalReserva <= 0) {
+      throw new Error('El total de la reserva debe ser mayor a 0');
+    }
+
+    if (totalPagado !== undefined) {
+      if (totalPagado < 0) {
+        throw new Error('El total pagado no puede ser negativo');
+      }
+
+      if (totalPagado > totalReserva) {
+        throw new Error('El total pagado no puede ser mayor al total de la reserva');
+      }
+    }
+  }
+
+  /**
    * Valida que el número de huéspedes sea válido
    */
   private validateNumeroHuespedes(numero: number): void {
@@ -58,7 +77,12 @@ export class CreateReservaService {
       // 1. Validaciones básicas de reserva
       this.validateDates(requestData.fecha_entrada, requestData.fecha_salida);
       this.validatePrecio(requestData.precio_total);
+      this.validateCamposFinancieros(requestData.total_reserva, requestData.total_pagado);
       this.validateNumeroHuespedes(requestData.numero_huespedes);
+
+      // Calcular total_pendiente
+      const totalPagado = requestData.total_pagado || 0;
+      const totalPendiente = requestData.total_reserva - totalPagado;
 
       // 2. Procesar huéspedes (validar, buscar existentes, crear nuevos)
       const huespedesProcessados = await this.huespedesService.processHuespedes(
@@ -77,6 +101,9 @@ export class CreateReservaService {
         estado: requestData.estado,
         codigo_reserva: codigoReserva,
         precio_total: requestData.precio_total,
+        total_reserva: requestData.total_reserva,
+        total_pagado: totalPagado,
+        total_pendiente: totalPendiente,
         observaciones: requestData.observaciones,
         numero_huespedes: requestData.numero_huespedes
       });

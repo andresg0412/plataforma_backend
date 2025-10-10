@@ -17,6 +17,9 @@ export class ReservasRepository {
           r.estado,
           r.created_at as fecha_creacion,
           r.precio_total,
+          r.total_reserva,
+          r.total_pagado,
+          r.total_pendiente,
           r.observaciones,
           r.numero_huespedes,
           i.id_inmueble,
@@ -165,6 +168,9 @@ export class ReservasRepository {
     estado: string;
     codigo_reserva: string;
     precio_total: number;
+    total_reserva: number;
+    total_pagado: number;
+    total_pendiente: number;
     observaciones?: string;
     numero_huespedes: number;
   }) {
@@ -177,9 +183,12 @@ export class ReservasRepository {
           estado,
           codigo_reserva,
           precio_total,
+          total_reserva,
+          total_pagado,
+          total_pendiente,
           observaciones,
           numero_huespedes
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
         RETURNING id_reserva as id, created_at
       `;
       
@@ -190,6 +199,9 @@ export class ReservasRepository {
         reservaData.estado,
         reservaData.codigo_reserva,
         reservaData.precio_total,
+        reservaData.total_reserva,
+        reservaData.total_pagado,
+        reservaData.total_pendiente,
         reservaData.observaciones,
         reservaData.numero_huespedes
       ];
