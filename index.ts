@@ -13,6 +13,7 @@ import { inmueblesRoutes } from './routes/inmuebles.routes';
 import { propietariosRoutes } from './routes/propietarios.routes';
 import { reservasRoutes } from './routes/reservas.routes';
 import { disponibilidadRoutes } from './routes/disponibilidad.routes';
+import { movimientosRoutes } from './routes/movimientos.routes';
 import { errorHandler } from './middlewares/errorHandler';
 
 const server = fastify({ logger: true });
@@ -59,6 +60,7 @@ server.register(empresasRoutes, { prefix: '/empresas' });
 server.register(inmueblesRoutes, { prefix: '/inmuebles' });
 server.register(propietariosRoutes, { prefix: '/propietarios' });
 server.register(reservasRoutes, { prefix: '/reservas' });
+server.register(movimientosRoutes, { prefix: '/movimientos' });
 
 // Error handler
 server.setErrorHandler(errorHandler);
