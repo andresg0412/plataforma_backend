@@ -17,41 +17,57 @@ export async function getInmueblesFiltroService(empresaId: number): Promise<Serv
   try {
     console.log('🔄 Ejecutando getInmueblesFiltroService (egresos) para empresa:', empresaId);
 
-    // TODO: Implementar consulta real a la base de datos
-    // Por ahora devolvemos datos mock (mismos que ingresos para consistencia)
-    
-    const inmueblesMock: InmuebleFiltro[] = [
-      {
-        id: 1,
-        nombre: 'Apartamento Centro Histórico',
-        direccion: 'Carrera 10 #15-20, Centro'
-      },
-      {
-        id: 2,
-        nombre: 'Casa Zona Norte',
-        direccion: 'Calle 80 #25-15, Zona Norte'
-      },
-      {
-        id: 3,
-        nombre: 'Loft Zona Rosa',
-        direccion: 'Carrera 15 #85-30, Zona Rosa'
-      },
-      {
-        id: 4,
-        nombre: 'Apartamento Chapinero',
-        direccion: 'Calle 63 #11-40, Chapinero'
-      },
-      {
-        id: 5,
-        nombre: 'Penthouse La Candelaria',
-        direccion: 'Carrera 8 #12-25, La Candelaria'
-      }
-    ];
+    // Importar repository
+    const { MovimientosRepository } = await import('../../repositories/movimientos.repository');
 
-    console.log(`✅ ${inmueblesMock.length} inmuebles encontrados para filtro de egresos`);
+    // Verificar que la empresa existe (solo si se especifica una empresa)
+    if (empresaId && empresaId > 0) {
+      const empresaExists = await MovimientosRepository.existsEmpresa(empresaId.toString());
+      if (!empresaExists) {
+        return {
+          data: null,
+          error: {
+            message: 'Empresa no encontrada',
+            status: 404,
+            details: 'La empresa especificada no existe'
+          }
+        };
+      }
+    }
+
+    // Obtener inmuebles activos 
+    let inmuebles;
+    if (empresaId && empresaId > 0) {
+      // Obtener inmuebles de la empresa específica
+      inmuebles = await MovimientosRepository.getInmueblesSelector(empresaId.toString());
+    } else {
+      // Obtener todos los inmuebles activos de todas las empresas
+      const pool = (await import('../../libs/db')).default;
+      const query = `
+        SELECT 
+          id_inmueble::text as id,
+          nombre,
+          direccion,
+          estado
+        FROM inmuebles 
+        WHERE estado = 'activo'
+        ORDER BY nombre ASC
+      `;
+      const { rows } = await pool.query(query);
+      inmuebles = rows;
+    }
+
+    // Transformar al formato de la interface InmuebleFiltro
+    const inmueblesFiltro: InmuebleFiltro[] = inmuebles.map(inmueble => ({
+      id: parseInt(inmueble.id),
+      nombre: inmueble.nombre,
+      direccion: inmueble.direccion
+    }));
+
+    console.log(`✅ ${inmueblesFiltro.length} inmuebles encontrados para filtro de egresos`);
 
     return { 
-      data: inmueblesMock,
+      data: inmueblesFiltro,
       error: null
     };
 

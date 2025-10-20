@@ -17,97 +17,88 @@ export async function getEgresosService(filtros: FiltrosEgresos): Promise<Servic
   try {
     console.log('🔄 Ejecutando getEgresosService con filtros:', filtros);
 
-    // TODO: Implementar consulta real a la base de datos
-    // Por ahora devolvemos datos mock para que el frontend funcione
-    
-    const egresosMock: Egreso[] = [
-      {
-        id: 1,
-        fecha: filtros.fecha,
-        hora: '08:30',
-        concepto: 'mantenimiento',
-        descripcion: 'Reparación de aire acondicionado',
-        monto: 120000,
-        id_inmueble: 1,
-        nombre_inmueble: 'Apartamento Centro Histórico',
-        id_reserva: null,
-        codigo_reserva: null,
-        metodo_pago: 'transferencia',
-        fecha_creacion: `${filtros.fecha}T08:30:00Z`,
-        comprobante: 'FACT-001'
-      },
-      {
-        id: 2,
-        fecha: filtros.fecha,
-        hora: '10:15',
-        concepto: 'limpieza',
-        descripcion: 'Servicio de limpieza profunda',
-        monto: 80000,
-        id_inmueble: 2,
-        nombre_inmueble: 'Casa Zona Norte',
-        id_reserva: 2,
-        codigo_reserva: 'RSV-2024-002',
-        metodo_pago: 'efectivo',
-        fecha_creacion: `${filtros.fecha}T10:15:00Z`,
-        comprobante: null
-      },
-      {
-        id: 3,
-        fecha: filtros.fecha,
-        hora: '13:45',
-        concepto: 'servicios_publicos',
-        descripcion: 'Factura de servicios públicos - Abril',
-        monto: 150000,
-        id_inmueble: 3,
-        nombre_inmueble: 'Loft Zona Rosa',
-        id_reserva: null,
-        codigo_reserva: null,
-        metodo_pago: 'transferencia',
-        fecha_creacion: `${filtros.fecha}T13:45:00Z`,
-        comprobante: 'SERV-001'
-      },
-      {
-        id: 4,
-        fecha: filtros.fecha,
-        hora: '15:20',
-        concepto: 'suministros',
-        descripcion: 'Compra de amenities para huéspedes',
-        monto: 45000,
-        id_inmueble: 1,
-        nombre_inmueble: 'Apartamento Centro Histórico',
-        id_reserva: null,
-        codigo_reserva: null,
-        metodo_pago: 'tarjeta',
-        fecha_creacion: `${filtros.fecha}T15:20:00Z`,
-        comprobante: null
-      },
-      {
-        id: 5,
-        fecha: filtros.fecha,
-        hora: '17:10',
-        concepto: 'comision',
-        descripcion: 'Comisión plataforma Airbnb',
-        monto: 35000,
-        id_inmueble: 2,
-        nombre_inmueble: 'Casa Zona Norte',
-        id_reserva: 3,
-        codigo_reserva: 'RSV-2024-003',
-        metodo_pago: 'otro',
-        fecha_creacion: `${filtros.fecha}T17:10:00Z`,
-        comprobante: 'COM-001'
-      }
-    ];
+    // Importar repository aquí para evitar dependencias circulares
+    const { MovimientosRepository } = await import('../../repositories/movimientos.repository');
 
-    // Filtrar por inmueble si se especifica
-    let egresosFiltrados = egresosMock;
-    if (filtros.id_inmueble) {
-      egresosFiltrados = egresosMock.filter(egreso => egreso.id_inmueble === filtros.id_inmueble);
+    // Verificar que la empresa existe (solo si se especifica una empresa)
+    if (filtros.empresa_id && filtros.empresa_id > 0) {
+      const empresaExists = await MovimientosRepository.existsEmpresa(filtros.empresa_id.toString());
+      if (!empresaExists) {
+        return {
+          data: null,
+          error: {
+            message: 'Empresa no encontrada',
+            status: 404,
+            details: 'La empresa especificada no existe'
+          }
+        };
+      }
     }
 
-    console.log(`✅ ${egresosFiltrados.length} egresos encontrados`);
+    // Construir query para obtener solo egresos
+    let query = `
+      SELECT 
+        m.id,
+        m.fecha,
+        EXTRACT(HOUR FROM m.fecha_creacion)::text || ':' || LPAD(EXTRACT(MINUTE FROM m.fecha_creacion)::text, 2, '0') as hora,
+        m.concepto,
+        m.descripcion,
+        m.monto,
+        m.id_inmueble::integer as id_inmueble,
+        i.nombre as nombre_inmueble,
+        m.id_reserva,
+        r.codigo_reserva,
+        m.metodo_pago,
+        m.comprobante,
+        m.fecha_creacion
+      FROM movimientos m
+      LEFT JOIN inmuebles i ON m.id_inmueble = i.id_inmueble::text
+      LEFT JOIN reservas r ON m.id_reserva = r.id_reserva::text
+      WHERE m.fecha = $1 AND m.tipo = 'egreso'
+    `;
+
+    const params: any[] = [filtros.fecha];
+
+    // Filtrar por empresa solo si se especifica
+    if (filtros.empresa_id && filtros.empresa_id > 0) {
+      query += ' AND m.id_empresa = $2';
+      params.push(filtros.empresa_id.toString());
+    }
+
+    // Filtrar por inmueble si se especifica
+    if (filtros.id_inmueble) {
+      const paramIndex = params.length + 1;
+      query += ` AND m.id_inmueble = $${paramIndex}`;
+      params.push(filtros.id_inmueble.toString());
+    }
+
+    query += ' ORDER BY m.fecha_creacion DESC';
+
+    // Ejecutar consulta
+    const pool = (await import('../../libs/db')).default;
+    const { rows } = await pool.query(query, params);
+
+    // Transformar resultados al formato de la interface Egreso
+    const egresos: Egreso[] = rows.map(row => ({
+      id: parseInt(row.id) || 0,
+      fecha: row.fecha,
+      hora: row.hora,
+      concepto: row.concepto,
+      descripcion: row.descripcion,
+      monto: parseFloat(row.monto) || 0,
+      id_inmueble: row.id_inmueble,
+      nombre_inmueble: row.nombre_inmueble || 'Sin nombre',
+      id_reserva: row.id_reserva ? parseInt(row.id_reserva) : null,
+      codigo_reserva: row.codigo_reserva || null,
+      metodo_pago: row.metodo_pago,
+      fecha_creacion: row.fecha_creacion,
+      comprobante: row.comprobante
+    }));
+
+    console.log(`✅ ${egresos.length} egresos encontrados`);
 
     return { 
-      data: egresosFiltrados,
+      data: egresos,
       error: null
     };
 

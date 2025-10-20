@@ -17,56 +17,116 @@ export async function getResumenIngresosService(filtros: FiltrosIngresos): Promi
   try {
     console.log('🔄 Ejecutando getResumenIngresosService con filtros:', filtros);
 
-    // TODO: Implementar consulta real a la base de datos
-    // Por ahora calculamos basado en datos mock
-    
-    // Simulamos obtener los ingresos del día
-    const ingresosMock = [
-      { id_inmueble: 1, nombre_inmueble: 'Apartamento Centro Histórico', monto: 300000 },
-      { id_inmueble: 1, nombre_inmueble: 'Apartamento Centro Histórico', monto: 50000 },
-      { id_inmueble: 2, nombre_inmueble: 'Casa Zona Norte', monto: 150000 },
-      { id_inmueble: 3, nombre_inmueble: 'Loft Zona Rosa', monto: 80000 },
-      { id_inmueble: 3, nombre_inmueble: 'Loft Zona Rosa', monto: 120000 }
-    ];
+    // Importar repository y pool
+    const { MovimientosRepository } = await import('../../repositories/movimientos.repository');
+    const pool = (await import('../../libs/db')).default;
 
-    // Filtrar por inmueble si se especifica
-    let ingresosFiltrados = ingresosMock;
-    if (filtros.id_inmueble) {
-      ingresosFiltrados = ingresosMock.filter(ingreso => ingreso.id_inmueble === filtros.id_inmueble);
+    // Verificar que la empresa existe (solo si se especifica una empresa)
+    if (filtros.empresa_id && filtros.empresa_id > 0) {
+      const empresaExists = await MovimientosRepository.existsEmpresa(filtros.empresa_id.toString());
+      if (!empresaExists) {
+        return {
+          data: null,
+          error: {
+            message: 'Empresa no encontrada',
+            status: 404,
+            details: 'La empresa especificada no existe'
+          }
+        };
+      }
     }
 
-    // Calcular totales
-    const totalIngresos = ingresosFiltrados.reduce((sum, ingreso) => sum + ingreso.monto, 0);
-    const cantidadIngresos = ingresosFiltrados.length;
-    const promedioIngreso = cantidadIngresos > 0 ? totalIngresos / cantidadIngresos : 0;
+    // Construir query para obtener resumen de ingresos
+    let query: string;
+    let params: any[];
 
-    // Calcular desglose por inmueble (solo si no hay filtro específico de inmueble)
-    let desgloseInmuebles = undefined;
-    if (!filtros.id_inmueble) {
-      const inmuebleMap = new Map();
+    if (filtros.id_inmueble) {
+      // Resumen para un inmueble específico
+      query = `
+        SELECT 
+          COUNT(*) as cantidad_ingresos,
+          SUM(m.monto) as total_ingresos,
+          AVG(m.monto) as promedio_ingreso,
+          i.nombre as nombre_inmueble
+        FROM movimientos m
+        LEFT JOIN inmuebles i ON m.id_inmueble = i.id_inmueble::text
+        WHERE m.fecha = $1 AND m.tipo = 'ingreso' AND m.id_inmueble = $2
+      `;
+      params = [filtros.fecha, filtros.id_inmueble.toString()];
       
-      ingresosFiltrados.forEach(ingreso => {
-        const key = ingreso.id_inmueble;
-        if (!inmuebleMap.has(key)) {
-          inmuebleMap.set(key, {
-            id_inmueble: ingreso.id_inmueble,
-            nombre_inmueble: ingreso.nombre_inmueble,
-            total: 0,
-            cantidad: 0
-          });
-        }
-        
-        const inmuebleData = inmuebleMap.get(key);
-        inmuebleData.total += ingreso.monto;
-        inmuebleData.cantidad += 1;
-      });
+      // Agregar filtro de empresa si se especifica
+      if (filtros.empresa_id && filtros.empresa_id > 0) {
+        query = query.replace('WHERE m.fecha = $1 AND m.tipo = \'ingreso\' AND m.id_inmueble = $2', 
+                             'WHERE m.fecha = $1 AND m.id_empresa = $2 AND m.tipo = \'ingreso\' AND m.id_inmueble = $3');
+        params = [filtros.fecha, filtros.empresa_id.toString(), filtros.id_inmueble.toString()];
+      }
+      
+      query += ' GROUP BY i.nombre';
+    } else {
+      // Resumen general con desglose por inmueble
+      query = `
+        SELECT 
+          COUNT(*) as cantidad_ingresos,
+          SUM(m.monto) as total_ingresos,
+          AVG(m.monto) as promedio_ingreso
+        FROM movimientos m
+        WHERE m.fecha = $1 AND m.tipo = 'ingreso'
+      `;
+      params = [filtros.fecha];
+      
+      // Agregar filtro de empresa si se especifica
+      if (filtros.empresa_id && filtros.empresa_id > 0) {
+        query = query.replace('WHERE m.fecha = $1 AND m.tipo = \'ingreso\'', 
+                             'WHERE m.fecha = $1 AND m.id_empresa = $2 AND m.tipo = \'ingreso\'');
+        params.push(filtros.empresa_id.toString());
+      }
+    }
 
-      desgloseInmuebles = Array.from(inmuebleMap.values());
+    // Ejecutar consulta principal
+    const { rows: resumenRows } = await pool.query(query, params);
+    
+    const totalIngresos = parseFloat(resumenRows[0]?.total_ingresos) || 0;
+    const cantidadIngresos = parseInt(resumenRows[0]?.cantidad_ingresos) || 0;
+    const promedioIngreso = parseFloat(resumenRows[0]?.promedio_ingreso) || 0;
+
+    // Obtener desglose por inmueble (solo si no hay filtro específico de inmueble)
+    let desgloseInmuebles = undefined;
+    if (!filtros.id_inmueble && cantidadIngresos > 0) {
+      let desgloseQuery = `
+        SELECT 
+          m.id_inmueble::integer as id_inmueble,
+          i.nombre as nombre_inmueble,
+          COUNT(*) as cantidad,
+          SUM(m.monto) as total
+        FROM movimientos m
+        LEFT JOIN inmuebles i ON m.id_inmueble = i.id_inmueble::text
+        WHERE m.fecha = $1 AND m.tipo = 'ingreso'
+      `;
+      
+      let desgloseParams = [filtros.fecha];
+      
+      // Agregar filtro de empresa si se especifica
+      if (filtros.empresa_id && filtros.empresa_id > 0) {
+        desgloseQuery = desgloseQuery.replace('WHERE m.fecha = $1 AND m.tipo = \'ingreso\'', 
+                                             'WHERE m.fecha = $1 AND m.id_empresa = $2 AND m.tipo = \'ingreso\'');
+        desgloseParams.push(filtros.empresa_id.toString());
+      }
+      
+      desgloseQuery += ' GROUP BY m.id_inmueble, i.nombre ORDER BY total DESC';
+      
+      const { rows: desgloseRows } = await pool.query(desgloseQuery, desgloseParams);
+      
+      desgloseInmuebles = desgloseRows.map(row => ({
+        id_inmueble: row.id_inmueble,
+        nombre_inmueble: row.nombre_inmueble || 'Sin nombre',
+        total: parseFloat(row.total) || 0,
+        cantidad: parseInt(row.cantidad) || 0
+      }));
     }
 
     const resumen: ResumenIngresos = {
       fecha: filtros.fecha,
-      inmueble_filtro: filtros.id_inmueble ? `Inmueble ID: ${filtros.id_inmueble}` : null,
+      inmueble_filtro: filtros.id_inmueble ? resumenRows[0]?.nombre_inmueble || null : null,
       total_ingresos: totalIngresos,
       cantidad_ingresos: cantidadIngresos,
       promedio_ingreso: Math.round(promedioIngreso),

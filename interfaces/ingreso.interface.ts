@@ -34,7 +34,7 @@ export interface ResumenIngresos {
 export interface FiltrosIngresos {
   fecha: string; // Obligatorio - formato YYYY-MM-DD
   id_inmueble?: number; // Opcional - para filtrar por inmueble específico
-  empresa_id: number; // Obligatorio - del contexto del usuario
+  empresa_id?: number; // Opcional - del contexto del usuario. Si no se especifica, obtiene de todas las empresas
 }
 
 export interface InmuebleFiltro {

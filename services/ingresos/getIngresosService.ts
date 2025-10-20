@@ -17,69 +17,89 @@ export async function getIngresosService(filtros: FiltrosIngresos): Promise<Serv
   try {
     console.log('🔄 Ejecutando getIngresosService con filtros:', filtros);
 
-    // TODO: Implementar consulta real a la base de datos
-    // Por ahora devolvemos datos mock para que el frontend funcione
-    
-    const ingresosMock: Ingreso[] = [
-      {
-        id: 1,
-        fecha: filtros.fecha,
-        hora: '09:30',
-        concepto: 'reserva',
-        descripcion: 'Pago de reserva - Apartamento Centro',
-        monto: 300000,
-        id_inmueble: 1,
-        nombre_inmueble: 'Apartamento Centro Histórico',
-        id_reserva: 1,
-        codigo_reserva: 'RSV-2024-001',
-        metodo_pago: 'transferencia',
-        tipo_registro: 'pago',
-        fecha_creacion: `${filtros.fecha}T09:30:00Z`,
-        comprobante: null
-      },
-      {
-        id: 2,
-        fecha: filtros.fecha,
-        hora: '14:15',
-        concepto: 'deposito_garantia',
-        descripcion: 'Depósito de garantía - Casa Zona Norte',
-        monto: 150000,
-        id_inmueble: 2,
-        nombre_inmueble: 'Casa Zona Norte',
-        id_reserva: 2,
-        codigo_reserva: 'RSV-2024-002',
-        metodo_pago: 'efectivo',
-        tipo_registro: 'movimiento',
-        fecha_creacion: `${filtros.fecha}T14:15:00Z`,
-        comprobante: 'COMP-001'
-      },
-      {
-        id: 3,
-        fecha: filtros.fecha,
-        hora: '16:45',
-        concepto: 'limpieza',
-        descripcion: 'Pago adicional por limpieza profunda',
-        monto: 80000,
-        id_inmueble: 3,
-        nombre_inmueble: 'Loft Zona Rosa',
-        id_reserva: null,
-        codigo_reserva: null,
-        metodo_pago: 'tarjeta',
-        tipo_registro: 'movimiento',
-        fecha_creacion: `${filtros.fecha}T16:45:00Z`,
-        comprobante: null
-      }
-    ];
+    // Importar repository aquí para evitar dependencias circulares
+    const { MovimientosRepository } = await import('../../repositories/movimientos.repository');
 
-    // Filtrar por inmueble si se especifica
-    let ingresosFiltrados = ingresosMock;
-    if (filtros.id_inmueble) {
-      ingresosFiltrados = ingresosMock.filter(ingreso => ingreso.id_inmueble === filtros.id_inmueble);
+    // Verificar que la empresa existe (solo si se especifica una empresa)
+    if (filtros.empresa_id && filtros.empresa_id > 0) {
+      const empresaExists = await MovimientosRepository.existsEmpresa(filtros.empresa_id.toString());
+      if (!empresaExists) {
+        return {
+          data: null,
+          error: {
+            message: 'Empresa no encontrada',
+            status: 404,
+            details: 'La empresa especificada no existe'
+          }
+        };
+      }
     }
 
-    console.log(`✅ ${ingresosFiltrados.length} ingresos encontrados`);
+    // Construir query para obtener solo ingresos
+    let query = `
+      SELECT 
+        m.id,
+        m.fecha,
+        EXTRACT(HOUR FROM m.fecha_creacion)::text || ':' || LPAD(EXTRACT(MINUTE FROM m.fecha_creacion)::text, 2, '0') as hora,
+        m.concepto,
+        m.descripcion,
+        m.monto,
+        m.id_inmueble::integer as id_inmueble,
+        i.nombre as nombre_inmueble,
+        m.id_reserva,
+        r.codigo_reserva,
+        m.metodo_pago,
+        m.comprobante,
+        'movimiento' as tipo_registro,
+        m.fecha_creacion
+      FROM movimientos m
+      LEFT JOIN inmuebles i ON m.id_inmueble = i.id_inmueble::text
+      LEFT JOIN reservas r ON m.id_reserva = r.id_reserva::text
+      WHERE m.fecha = $1 AND m.tipo = 'ingreso'
+    `;
 
-    return { data: ingresosFiltrados, error: null };
+    const params: any[] = [filtros.fecha];
+
+    // Filtrar por empresa solo si se especifica
+    if (filtros.empresa_id && filtros.empresa_id > 0) {
+      query += ' AND m.id_empresa = $2';
+      params.push(filtros.empresa_id.toString());
+    }
+
+    // Filtrar por inmueble si se especifica
+    if (filtros.id_inmueble) {
+      const paramIndex = params.length + 1;
+      query += ` AND m.id_inmueble = $${paramIndex}`;
+      params.push(filtros.id_inmueble.toString());
+    }
+
+    query += ' ORDER BY m.fecha_creacion DESC';
+
+    // Ejecutar consulta
+    const pool = (await import('../../libs/db')).default;
+    const { rows } = await pool.query(query, params);
+
+    // Transformar resultados al formato de la interface Ingreso
+    const ingresos: Ingreso[] = rows.map(row => ({
+      id: parseInt(row.id) || 0,
+      fecha: row.fecha,
+      hora: row.hora,
+      concepto: row.concepto,
+      descripcion: row.descripcion,
+      monto: parseFloat(row.monto) || 0,
+      id_inmueble: row.id_inmueble,
+      nombre_inmueble: row.nombre_inmueble || 'Sin nombre',
+      id_reserva: row.id_reserva ? parseInt(row.id_reserva) : null,
+      codigo_reserva: row.codigo_reserva || null,
+      metodo_pago: row.metodo_pago,
+      tipo_registro: row.tipo_registro,
+      fecha_creacion: row.fecha_creacion,
+      comprobante: row.comprobante
+    }));
+
+    console.log(`✅ ${ingresos.length} ingresos encontrados`);
+
+    return { data: ingresos, error: null };
 
   } catch (error) {
     console.error('❌ Error en getIngresosService:', error);
