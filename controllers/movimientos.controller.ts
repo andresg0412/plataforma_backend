@@ -11,6 +11,8 @@ import { editMovimientoService } from '../services/movimientos/editMovimientoSer
 import { getMovimientoByIdService } from '../services/movimientos/getMovimientoByIdService';
 import { deleteMovimientoService } from '../services/movimientos/deleteMovimientoService';
 import { getInmueblesSelectorsService } from '../services/movimientos/getInmueblesSelectorsService';
+import { filtrarMovimientosPorPlataformaService } from '../services/movimientos/filtrarMovimientosPorPlataformaService';
+import { reportePorPlataformaService } from '../services/movimientos/reportePorPlataformaService';
 
 // Importar schemas
 import {
@@ -68,10 +70,10 @@ export const movimientosController = {
       }
 
       const { fecha } = pathValidation.data;
-      const { empresa_id } = queryValidation.data;
+      const { empresa_id, plataforma_origen } = queryValidation.data;
 
-      // Llamar al servicio
-      const { data, error } = await getMovimientosFechaService(empresa_id, fecha);
+      // Llamar al servicio con filtro de plataforma
+      const { data, error } = await getMovimientosFechaService(empresa_id, fecha, plataforma_origen);
 
       if (error) {
         return reply.status(error.status || 500).send(
@@ -548,6 +550,134 @@ export const movimientosController = {
 
     } catch (err) {
       console.error('Error en getInmueblesSelector:', err);
+      return reply.status(500).send(
+        errorResponse({
+          message: 'Error interno del servidor',
+          code: 500,
+          error: err
+        })
+      );
+    }
+  },
+
+  /**
+   * GET /movimientos/filtrar-por-plataforma?fecha={fecha}&plataforma={plataforma}&empresa_id={empresa_id}
+   * Filtra movimientos por plataforma y fecha
+   */
+  filtrarMovimientosPorPlataforma: async (req: FastifyRequest, reply: FastifyReply) => {
+    const ctx = req.userContext;
+    
+    // Verificar autenticación
+    if (!ctx || !ctx.id) {
+      return reply.status(401).send(
+        errorResponse({
+          message: 'No autenticado',
+          code: 401,
+          error: 'Unauthorized'
+        })
+      );
+    }
+
+    try {
+      // Validar query parameters
+      const query = req.query as any;
+      
+      if (!query.fecha || !query.plataforma || !query.empresa_id) {
+        return reply.status(400).send(
+          errorResponse({
+            message: 'Parámetros requeridos: fecha, plataforma y empresa_id',
+            code: 400,
+            error: 'Missing required parameters'
+          })
+        );
+      }
+
+      const { fecha, plataforma, empresa_id } = query;
+
+      // Llamar al servicio
+      const { data, error } = await filtrarMovimientosPorPlataformaService(fecha, plataforma, empresa_id);
+
+      if (error) {
+        return reply.status(error.status || 500).send(
+          errorResponse({
+            message: error.message,
+            code: error.status || 500,
+            error: error.details
+          })
+        );
+      }
+
+      return reply.send(successResponse({
+        data,
+        message: 'Movimientos filtrados exitosamente'
+      }));
+
+    } catch (err) {
+      console.error('Error en filtrarMovimientosPorPlataforma:', err);
+      return reply.status(500).send(
+        errorResponse({
+          message: 'Error interno del servidor',
+          code: 500,
+          error: err
+        })
+      );
+    }
+  },
+
+  /**
+   * GET /reportes/por-plataforma?fecha_inicio={fecha_inicio}&fecha_fin={fecha_fin}&empresa_id={empresa_id}
+   * Genera reporte de ingresos por plataforma
+   */
+  reportePorPlataforma: async (req: FastifyRequest, reply: FastifyReply) => {
+    const ctx = req.userContext;
+    
+    // Verificar autenticación
+    if (!ctx || !ctx.id) {
+      return reply.status(401).send(
+        errorResponse({
+          message: 'No autenticado',
+          code: 401,
+          error: 'Unauthorized'
+        })
+      );
+    }
+
+    try {
+      // Validar query parameters
+      const query = req.query as any;
+      
+      if (!query.fecha_inicio || !query.fecha_fin || !query.empresa_id) {
+        return reply.status(400).send(
+          errorResponse({
+            message: 'Parámetros requeridos: fecha_inicio, fecha_fin y empresa_id',
+            code: 400,
+            error: 'Missing required parameters'
+          })
+        );
+      }
+
+      const { fecha_inicio, fecha_fin, empresa_id } = query;
+
+      // Llamar al servicio
+      const { data, error } = await reportePorPlataformaService(fecha_inicio, fecha_fin, empresa_id);
+
+      if (error) {
+        return reply.status(error.status || 500).send(
+          errorResponse({
+            message: error.message,
+            code: error.status || 500,
+            error: error.details
+          })
+        );
+      }
+
+      return reply.send(successResponse({
+        data,
+        message: 'Reporte generado exitosamente'
+      }));
+
+    } catch (err) {
+      console.error('Error en reportePorPlataforma:', err);
       return reply.status(500).send(
         errorResponse({
           message: 'Error interno del servidor',

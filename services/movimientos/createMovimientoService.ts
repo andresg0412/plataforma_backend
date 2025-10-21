@@ -1,5 +1,6 @@
 import { MovimientosRepository } from '../../repositories/movimientos.repository';
 import { CreateMovimientoData, Movimiento, isConceptoValido } from '../../interfaces/movimiento.interface';
+import { isPlataformaValida } from '../../constants/plataformas';
 
 interface ServiceResponse<T> {
   data: T | null;
@@ -27,6 +28,45 @@ export async function createMovimientoService(
           details: `El concepto '${data.concepto}' no es válido para el tipo '${data.tipo}'`
         }
       };
+    }
+
+    // Validar lógica de negocio para plataforma_origen
+    if (data.plataforma_origen) {
+      // Validar que la plataforma sea válida
+      if (!isPlataformaValida(data.plataforma_origen)) {
+        return {
+          data: null,
+          error: {
+            message: 'Plataforma de origen inválida',
+            status: 400,
+            details: 'La plataforma especificada no es válida'
+          }
+        };
+      }
+      
+      // Solo permitir plataforma_origen en ingresos de reserva
+      if (data.tipo !== 'ingreso' || data.concepto !== 'reserva') {
+        return {
+          data: null,
+          error: {
+            message: 'Plataforma de origen inválida',
+            status: 400,
+            details: 'La plataforma de origen solo es válida para movimientos de tipo "ingreso" con concepto "reserva"'
+          }
+        };
+      }
+      
+      // Si especifica plataforma_origen, debe tener id_reserva
+      if (!data.id_reserva || data.id_reserva.trim() === '') {
+        return {
+          data: null,
+          error: {
+            message: 'Reserva requerida',
+            status: 400,
+            details: 'Debe especificar un id_reserva cuando se define una plataforma de origen'
+          }
+        };
+      }
     }
 
     // Verificar que la empresa existe

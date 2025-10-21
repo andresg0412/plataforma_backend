@@ -14,6 +14,8 @@ export interface Movimiento {
   id_empresa: string;
   fecha_creacion?: Date; // TIMESTAMP - Fecha y hora exacta de creación
   fecha_actualizacion?: Date; // TIMESTAMP - Fecha de actualización
+  // Campo de plataforma de origen (opcional)
+  plataforma_origen?: string | null;
 }
 
 export interface CreateMovimientoData {
@@ -27,6 +29,8 @@ export interface CreateMovimientoData {
   metodo_pago: 'efectivo' | 'transferencia' | 'tarjeta' | 'otro';
   comprobante?: string | null;
   id_empresa: string;
+  // Campo de plataforma de origen (opcional)
+  plataforma_origen?: string | null;
 }
 
 export interface EditMovimientoData {
@@ -39,12 +43,16 @@ export interface EditMovimientoData {
   id_reserva?: string | null;
   metodo_pago?: 'efectivo' | 'transferencia' | 'tarjeta' | 'otro';
   comprobante?: string | null;
+  // Campo de plataforma de origen (opcional)
+  plataforma_origen?: string | null;
 }
 
 export interface MovimientosQueryParams {
   fecha?: string;
   empresa_id?: string;
   id_inmueble?: string;
+  // Nuevo campo para filtrar por plataforma
+  plataforma_origen?: string;
 }
 
 export interface ResumenDiario {

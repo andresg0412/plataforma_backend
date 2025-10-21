@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { CONCEPTOS_INGRESOS, CONCEPTOS_EGRESOS } from '../interfaces/movimiento.interface';
+import { PLATAFORMAS_ORIGEN, isPlataformaValida } from '../constants/plataformas';
 
 // Schema para validar fecha en formato YYYY-MM-DD
 const fechaSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
@@ -21,6 +22,22 @@ const montoSchema = z.number().min(0.01, {
   message: "El monto debe ser mayor a 0"
 });
 
+// Schema para validar id_reserva (convertir cadenas vacías a null)
+const idReservaSchema = z.string().optional().nullable().transform((val) => {
+  // Convertir cadenas vacías o solo espacios a null
+  if (val === '' || (val && val.trim() === '')) {
+    return null;
+  }
+  return val;
+});
+
+// Schema para validar plataforma de origen
+const plataformaOrigenSchema = z.string().refine((plataforma) => {
+  return isPlataformaValida(plataforma);
+}, {
+  message: `La plataforma debe ser una de: ${PLATAFORMAS_ORIGEN.join(', ')}`
+}).optional().nullable();
+
 // Schema para validar concepto según tipo
 const conceptoSchema = z.string().min(1, {
   message: "El concepto es requerido"
@@ -41,16 +58,18 @@ const movimientoBaseSchema = z.object({
   descripcion: descripcionSchema,
   monto: montoSchema,
   id_inmueble: z.string().min(1, { message: "El ID del inmueble es requerido" }),
-  id_reserva: z.string().optional().nullable(),
+  id_reserva: idReservaSchema,
   metodo_pago: z.enum(['efectivo', 'transferencia', 'tarjeta', 'otro'], {
     errorMap: () => ({ message: "El método de pago debe ser 'efectivo', 'transferencia', 'tarjeta' u 'otro'" })
   }),
   comprobante: z.string().optional().nullable(),
-  id_empresa: z.string().min(1, { message: "El ID de la empresa es requerido" })
+  id_empresa: z.string().min(1, { message: "El ID de la empresa es requerido" }),
+  plataforma_origen: plataformaOrigenSchema
 });
 
-// Schema para crear movimiento con validación de concepto
+// Schema para crear movimiento con validación de concepto y plataforma
 export const CreateMovimientoSchema = movimientoBaseSchema.refine((data) => {
+  // Validar concepto según tipo
   if (data.tipo === 'ingreso') {
     return CONCEPTOS_INGRESOS.includes(data.concepto as any);
   } else {
@@ -59,6 +78,15 @@ export const CreateMovimientoSchema = movimientoBaseSchema.refine((data) => {
 }, {
   message: "El concepto no es válido para el tipo de movimiento especificado",
   path: ["concepto"]
+}).refine((data) => {
+  // Validar que plataforma_origen solo se use en ingresos de reserva
+  if (data.plataforma_origen && (data.tipo !== 'ingreso' || data.concepto !== 'reserva')) {
+    return false;
+  }
+  return true;
+}, {
+  message: "La plataforma de origen solo es válida para movimientos de tipo 'ingreso' con concepto 'reserva'",
+  path: ["plataforma_origen"]
 });
 
 // Schema para editar movimiento (todos los campos opcionales)
@@ -69,9 +97,10 @@ export const EditMovimientoSchema = z.object({
   descripcion: descripcionSchema.optional(),
   monto: montoSchema.optional(),
   id_inmueble: z.string().min(1).optional(),
-  id_reserva: z.string().optional().nullable(),
+  id_reserva: idReservaSchema,
   metodo_pago: z.enum(['efectivo', 'transferencia', 'tarjeta', 'otro']).optional(),
-  comprobante: z.string().optional().nullable()
+  comprobante: z.string().optional().nullable(),
+  plataforma_origen: plataformaOrigenSchema
 }).refine((data) => {
   // Si se especifica tipo y concepto, validar que sean compatibles
   if (data.tipo && data.concepto) {
@@ -85,11 +114,22 @@ export const EditMovimientoSchema = z.object({
 }, {
   message: "El concepto no es válido para el tipo de movimiento especificado",
   path: ["concepto"]
+}).refine((data) => {
+  // Validar que plataforma_origen solo se use en ingresos de reserva
+  if (data.plataforma_origen && data.tipo && data.concepto && 
+      (data.tipo !== 'ingreso' || data.concepto !== 'reserva')) {
+    return false;
+  }
+  return true;
+}, {
+  message: "La plataforma de origen solo es válida para movimientos de tipo 'ingreso' con concepto 'reserva'",
+  path: ["plataforma_origen"]
 });
 
 // Schema para query parameters de obtener movimientos por fecha
 export const MovimientosFechaQuerySchema = z.object({
-  empresa_id: z.string().min(1, { message: "El ID de empresa es requerido" })
+  empresa_id: z.string().min(1, { message: "El ID de empresa es requerido" }),
+  plataforma_origen: z.string().optional() // Filtro opcional por plataforma
 });
 
 // Schema para query parameters de obtener movimientos por inmueble

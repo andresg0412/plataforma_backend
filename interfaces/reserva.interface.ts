@@ -37,6 +37,8 @@ export interface Reserva {
   fecha_creacion: string;
   observaciones: string;
   id_empresa: number;
+  // Campo de plataforma de origen
+  plataforma_origen: string;
 }
 
 export interface ReservasResponse {
@@ -76,6 +78,8 @@ export interface CreateReservaRequest {
   estado: string;
   observaciones?: string;
   id_empresa: number;
+  // Campo de plataforma de origen (opcional)
+  plataforma_origen?: string;
 }
 
 export interface CreateReservaResponse {
@@ -96,4 +100,6 @@ export interface EditReservaRequest {
   estado?: string;
   observaciones?: string;
   id_empresa?: number;
+  // Campo de plataforma de origen (opcional)
+  plataforma_origen?: string;
 }

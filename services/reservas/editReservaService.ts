@@ -1,5 +1,6 @@
 import { EditReservaRequest } from '../../interfaces/reserva.interface';
 import { ReservasRepository } from '../../repositories/reservas.repository';
+import { isPlataformaValida } from '../../constants/plataformas';
 
 const reservasRepository = new ReservasRepository();
 
@@ -12,8 +13,15 @@ export async function editReservaService(id: number, data: EditReservaRequest) {
     'precio_total',
     'estado',
     'observaciones',
-    'id_empresa'
+    'id_empresa',
+    'plataforma_origen'
   ];
+  
+  // Validar plataforma de origen si está presente
+  if (data.plataforma_origen && !isPlataformaValida(data.plataforma_origen)) {
+    throw new Error('La plataforma de origen especificada no es válida');
+  }
+  
   const fieldsToUpdate: any = {};
   for (const key of editableFields) {
     if (data[key as keyof EditReservaRequest] !== undefined) {

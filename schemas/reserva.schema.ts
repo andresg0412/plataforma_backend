@@ -61,7 +61,8 @@ export const getReservasSchema: FastifySchema = {
               estado: { type: 'string' },
               fecha_creacion: { type: 'string' },
               observaciones: { type: 'string' },
-              id_empresa: { type: 'number' }
+              id_empresa: { type: 'number' },
+              plataforma_origen: { type: 'string' }
             }
           }
         },
@@ -122,7 +123,11 @@ export const createReservaSchema: FastifySchema = {
       total_pagado: { type: 'number', minimum: 0 },
       estado: { type: 'string', enum: ['pendiente', 'confirmada', 'cancelada', 'finalizada'] },
       observaciones: { type: 'string' },
-      id_empresa: { type: 'number' }
+      id_empresa: { type: 'number' },
+      plataforma_origen: { 
+        type: 'string', 
+        enum: ['airbnb', 'booking', 'pagina_web', 'directa'] 
+      }
     }
   },
   response: {
@@ -174,7 +179,8 @@ export const createReservaSchema: FastifySchema = {
             estado: { type: 'string' },
             fecha_creacion: { type: 'string' },
             observaciones: { type: 'string' },
-            id_empresa: { type: 'number' }
+            id_empresa: { type: 'number' },
+            plataforma_origen: { type: 'string' }
           }
         },
         message: { type: 'string' }
@@ -223,7 +229,11 @@ export const editReservaSchema: FastifySchema = {
       total_pagado: { type: 'number', minimum: 0 },
       estado: { type: 'string', enum: ['pendiente', 'confirmada', 'cancelada', 'finalizada'] },
       observaciones: { type: 'string' },
-      id_empresa: { type: 'number' }
+      id_empresa: { type: 'number' },
+      plataforma_origen: { 
+        type: 'string', 
+        enum: ['airbnb', 'booking', 'pagina_web', 'directa'] 
+      }
     },
     additionalProperties: false
   },

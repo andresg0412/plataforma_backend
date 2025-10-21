@@ -112,10 +112,16 @@ export class GetReservasService {
           numero_huespedes: reserva.numero_huespedes || huespedesReserva.length || 1,
           huespedes: huespedesReserva,
           precio_total: reserva.precio_total || this.calculateMockedPrecioTotal(reserva.fecha_entrada, reserva.fecha_salida),
+          // Campos financieros
+          total_reserva: reserva.total_reserva || reserva.precio_total || this.calculateMockedPrecioTotal(reserva.fecha_entrada, reserva.fecha_salida),
+          total_pagado: reserva.total_pagado || 0,
+          total_pendiente: reserva.total_pendiente || (reserva.total_reserva || reserva.precio_total || this.calculateMockedPrecioTotal(reserva.fecha_entrada, reserva.fecha_salida)),
           estado: reserva.estado || 'pendiente',
           fecha_creacion: reserva.fecha_creacion.toISOString().split('T')[0],
           observaciones: reserva.observaciones || 'Sin observaciones',
-          id_empresa: reserva.id_empresa || 1
+          id_empresa: reserva.id_empresa || 1,
+          // Campo de plataforma de origen
+          plataforma_origen: reserva.plataforma_origen || 'directa'
         };
       });
 

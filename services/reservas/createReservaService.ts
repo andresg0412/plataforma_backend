@@ -2,6 +2,7 @@ import { ReservasRepository } from '../../repositories/reservas.repository';
 import { CreateReservaRequest, Reserva } from '../../interfaces/reserva.interface';
 import { GetReservasService } from './getReservasService';
 import { HuespedesService } from './huespedesService';
+import { PLATAFORMA_DEFAULT, isPlataformaValida } from '../../constants/plataformas';
 
 export class CreateReservaService {
   private reservasRepository: ReservasRepository;
@@ -12,6 +13,23 @@ export class CreateReservaService {
     this.reservasRepository = new ReservasRepository();
     this.getReservasService = new GetReservasService();
     this.huespedesService = new HuespedesService();
+  }
+
+  /**
+   * Valida la plataforma de origen
+   */
+  private validatePlataformaOrigen(plataformaOrigen?: string): string {
+    // Si no se especifica, usar valor por defecto
+    if (!plataformaOrigen) {
+      return PLATAFORMA_DEFAULT;
+    }
+
+    // Validar que sea una plataforma válida
+    if (!isPlataformaValida(plataformaOrigen)) {
+      throw new Error('La plataforma de origen especificada no es válida');
+    }
+
+    return plataformaOrigen;
   }
 
   /**
@@ -80,6 +98,9 @@ export class CreateReservaService {
       this.validateCamposFinancieros(requestData.total_reserva, requestData.total_pagado);
       this.validateNumeroHuespedes(requestData.numero_huespedes);
 
+      // 1.1. Validar y establecer plataforma de origen
+      const plataformaOrigen = this.validatePlataformaOrigen(requestData.plataforma_origen);
+
       // Calcular total_pendiente
       const totalPagado = requestData.total_pagado || 0;
       const totalPendiente = requestData.total_reserva - totalPagado;
@@ -105,7 +126,8 @@ export class CreateReservaService {
         total_pagado: totalPagado,
         total_pendiente: totalPendiente,
         observaciones: requestData.observaciones,
-        numero_huespedes: requestData.numero_huespedes
+        numero_huespedes: requestData.numero_huespedes,
+        plataforma_origen: plataformaOrigen
       });
 
       // 5. Relacionar todos los huéspedes con la reserva

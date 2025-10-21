@@ -12,16 +12,16 @@ interface ServiceResponse<T> {
 }
 
 /**
- * Servicio para obtener movimientos por fecha y empresa
+ * Servicio para filtrar movimientos por plataforma y fecha
  */
-export async function getMovimientosFechaService(
-  empresaId: string,
+export async function filtrarMovimientosPorPlataformaService(
   fecha: string,
-  plataformaOrigen?: string
+  plataforma: string,
+  empresaId: string
 ): Promise<ServiceResponse<Movimiento[]>> {
   try {
-    // Validar plataforma si se especifica
-    if (plataformaOrigen && !isPlataformaValida(plataformaOrigen)) {
+    // Validar plataforma
+    if (!isPlataformaValida(plataforma)) {
       return {
         data: null,
         error: {
@@ -45,8 +45,8 @@ export async function getMovimientosFechaService(
       };
     }
 
-    // Obtener movimientos
-    const movimientos = await MovimientosRepository.getMovimientosByFecha(fecha, empresaId, plataformaOrigen);
+    // Obtener movimientos filtrados por plataforma
+    const movimientos = await MovimientosRepository.getMovimientosByFecha(fecha, empresaId, plataforma);
 
     return {
       data: movimientos,
@@ -54,11 +54,11 @@ export async function getMovimientosFechaService(
     };
 
   } catch (error) {
-    console.error('Error en getMovimientosFechaService:', error);
+    console.error('Error en filtrarMovimientosPorPlataformaService:', error);
     return {
       data: null,
       error: {
-        message: 'Error al obtener movimientos',
+        message: 'Error al filtrar movimientos por plataforma',
         status: 500,
         details: error
       }

@@ -6,7 +6,7 @@ export class ReservasRepository {
   /**
    * Obtiene las reservas con filtros opcionales
    */
-  async getReservas(filters: GetReservasQuery = {}) {
+  async getReservas(filters: GetReservasQuery = {}): Promise<any[]> {
     try {
       let query = `
         SELECT 
@@ -22,6 +22,7 @@ export class ReservasRepository {
           r.total_pendiente,
           r.observaciones,
           r.numero_huespedes,
+          r.plataforma_origen,
           i.id_inmueble,
           i.nombre as nombre_inmueble,
           i.id_empresa
@@ -173,6 +174,7 @@ export class ReservasRepository {
     total_pendiente: number;
     observaciones?: string;
     numero_huespedes: number;
+    plataforma_origen: string;
   }) {
     try {
       const query = `
@@ -187,8 +189,9 @@ export class ReservasRepository {
           total_pagado,
           total_pendiente,
           observaciones,
-          numero_huespedes
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+          numero_huespedes,
+          plataforma_origen
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
         RETURNING id_reserva as id, created_at
       `;
       
@@ -203,7 +206,8 @@ export class ReservasRepository {
         reservaData.total_pagado,
         reservaData.total_pendiente,
         reservaData.observaciones,
-        reservaData.numero_huespedes
+        reservaData.numero_huespedes,
+        reservaData.plataforma_origen
       ];
       
       const result = await dbClient.query(query, values);
@@ -420,7 +424,8 @@ export class ReservasRepository {
       'precio_total',
       'estado',
       'observaciones',
-      'id_empresa'
+      'id_empresa',
+      'plataforma_origen'
     ];
     const setClauses: string[] = [];
     const values: any[] = [];

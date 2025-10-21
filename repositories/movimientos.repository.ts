@@ -12,8 +12,8 @@ export class MovimientosRepository {
   /**
    * Obtiene movimientos por fecha y empresa
    */
-  static async getMovimientosByFecha(fecha: string, empresaId: string): Promise<Movimiento[]> {
-    const query = `
+  static async getMovimientosByFecha(fecha: string, empresaId: string, plataformaOrigen?: string): Promise<Movimiento[]> {
+    let query = `
       SELECT 
         m.id,
         m.fecha,
@@ -29,15 +29,25 @@ export class MovimientosRepository {
         m.comprobante,
         m.id_empresa,
         m.fecha_creacion,
-        m.fecha_actualizacion
+        m.fecha_actualizacion,
+        m.plataforma_origen
       FROM movimientos m
       LEFT JOIN inmuebles i ON m.id_inmueble = i.id_inmueble::text
       LEFT JOIN reservas r ON m.id_reserva = r.id_reserva::text
       WHERE m.fecha = $1 AND m.id_empresa = $2
-      ORDER BY m.fecha_creacion DESC
     `;
     
-    const { rows } = await pool.query(query, [fecha, empresaId]);
+    const params: any[] = [fecha, empresaId];
+    
+    // Agregar filtro por plataforma si se especifica
+    if (plataformaOrigen) {
+      query += ` AND m.plataforma_origen = $3`;
+      params.push(plataformaOrigen);
+    }
+    
+    query += ` ORDER BY m.fecha_creacion DESC`;
+    
+    const { rows } = await pool.query(query, params);
     return rows;
   }
 
@@ -61,7 +71,8 @@ export class MovimientosRepository {
         m.comprobante,
         m.id_empresa,
         m.fecha_creacion,
-        m.fecha_actualizacion
+        m.fecha_actualizacion,
+        m.plataforma_origen
       FROM movimientos m
       LEFT JOIN inmuebles i ON m.id_inmueble = i.id_inmueble::text
       LEFT JOIN reservas r ON m.id_reserva = r.id_reserva::text
@@ -120,9 +131,9 @@ export class MovimientosRepository {
       INSERT INTO movimientos (
         id, fecha, tipo, concepto, descripcion, monto, 
         id_inmueble, id_reserva, metodo_pago, comprobante, 
-        id_empresa, fecha_creacion, fecha_actualizacion
+        id_empresa, fecha_creacion, fecha_actualizacion, plataforma_origen
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW(), $12)
       RETURNING *
     `;
     
@@ -137,7 +148,8 @@ export class MovimientosRepository {
       data.id_reserva,
       data.metodo_pago,
       data.comprobante,
-      data.id_empresa
+      data.id_empresa,
+      data.plataforma_origen
     ];
     
     const { rows } = await pool.query(query, values);
@@ -166,7 +178,8 @@ export class MovimientosRepository {
         m.comprobante,
         m.id_empresa,
         m.fecha_creacion,
-        m.fecha_actualizacion
+        m.fecha_actualizacion,
+        m.plataforma_origen
       FROM movimientos m
       LEFT JOIN inmuebles i ON m.id_inmueble = i.id_inmueble::text
       LEFT JOIN reservas r ON m.id_reserva = r.id_reserva::text
@@ -227,6 +240,10 @@ export class MovimientosRepository {
       setFields.push(`comprobante = $${paramIndex++}`);
       values.push(data.comprobante);
     }
+    if (data.plataforma_origen !== undefined) {
+      setFields.push(`plataforma_origen = $${paramIndex++}`);
+      values.push(data.plataforma_origen);
+    }
 
     if (setFields.length === 0) {
       throw new Error('No hay campos para actualizar');
@@ -263,6 +280,40 @@ export class MovimientosRepository {
     if (rowCount === 0) {
       throw new Error('Movimiento no encontrado');
     }
+  }
+
+  /**
+   * Genera reporte de ingresos por plataforma de origen
+   */
+  static async getReportePorPlataforma(fechaInicio: string, fechaFin: string, empresaId: string): Promise<any> {
+    const query = `
+      SELECT 
+        m.plataforma_origen,
+        SUM(CASE WHEN m.tipo = 'ingreso' THEN m.monto ELSE 0 END) as total_ingresos,
+        COUNT(DISTINCT m.id_reserva) as cantidad_reservas
+      FROM movimientos m
+      WHERE m.fecha >= $1 
+        AND m.fecha <= $2 
+        AND m.id_empresa = $3
+        AND m.tipo = 'ingreso'
+        AND m.concepto = 'reserva'
+        AND m.plataforma_origen IS NOT NULL
+      GROUP BY m.plataforma_origen
+      ORDER BY total_ingresos DESC
+    `;
+    
+    const { rows } = await pool.query(query, [fechaInicio, fechaFin, empresaId]);
+    
+    // Formatear resultado como objeto con claves de plataforma
+    const reporte: any = {};
+    rows.forEach(row => {
+      reporte[row.plataforma_origen] = {
+        total_ingresos: parseFloat(row.total_ingresos) || 0,
+        cantidad_reservas: parseInt(row.cantidad_reservas) || 0
+      };
+    });
+    
+    return reporte;
   }
 
   /**
