@@ -16,6 +16,7 @@ import { disponibilidadRoutes } from './routes/disponibilidad.routes';
 import { movimientosRoutes } from './routes/movimientos.routes';
 import { ingresosRoutes } from './routes/ingresos.routes';
 import { egresosRoutes } from './routes/egresos.routes';
+import pagosRoutes from './routes/pagos.routes';
 import { errorHandler } from './middlewares/errorHandler';
 
 const server = fastify({ logger: true });
@@ -65,6 +66,7 @@ server.register(reservasRoutes, { prefix: '/reservas' });
 server.register(movimientosRoutes, { prefix: '/movimientos' });
 server.register(ingresosRoutes, { prefix: '/ingresos' });
 server.register(egresosRoutes, { prefix: '/egresos' });
+server.register(pagosRoutes);
 
 // Error handler
 server.setErrorHandler(errorHandler);

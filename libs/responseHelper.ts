@@ -1,3 +1,5 @@
+import { FastifyReply } from 'fastify';
+
 // Helper para estructurar respuestas API
 export function successResponse(data: any, code = 200) {
   return {
@@ -26,3 +28,27 @@ export function errorResponse({
     timestamp: new Date().toISOString(),
   };
 }
+
+// Helper mejorado para respuestas con Fastify
+export const responseHelper = {
+  success: (reply: FastifyReply, data: any, message?: string, statusCode = 200) => {
+    return reply.status(statusCode).send({
+      success: true,
+      data,
+      message: message || 'Operación exitosa',
+      timestamp: new Date().toISOString()
+    });
+  },
+
+  error: (reply: FastifyReply, message: string, statusCode = 500, details?: any) => {
+    return reply.status(statusCode).send({
+      success: false,
+      error: {
+        message,
+        details,
+        code: statusCode
+      },
+      timestamp: new Date().toISOString()
+    });
+  }
+};
