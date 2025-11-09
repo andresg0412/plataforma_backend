@@ -393,8 +393,12 @@ export class ReservasRepository {
           r.estado,
           r.created_at as fecha_creacion,
           r.precio_total,
+          r.total_reserva,
+          r.total_pagado,
+          r.total_pendiente,
           r.observaciones,
           r.numero_huespedes,
+          r.plataforma_origen,
           i.id_inmueble,
           i.nombre as nombre_inmueble,
           i.id_empresa

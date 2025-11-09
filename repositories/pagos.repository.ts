@@ -10,6 +10,7 @@ import {
   calcularEstadoPago,
   calcularPorcentajePagado
 } from '../interfaces/pago.interface';
+import { updateTotalesReservaService } from '../services/reservas/updateTotalesReservaService';
 
 export class PagosRepository {
   
@@ -212,6 +213,14 @@ export class PagosRepository {
       throw new Error('Error al recuperar el pago creado');
     }
 
+    // Actualizar los totales de la reserva después de crear el pago
+    try {
+      await updateTotalesReservaService.actualizarTotales(data.id_reserva);
+    } catch (error) {
+      console.warn(`Advertencia: No se pudieron actualizar los totales de la reserva ${data.id_reserva}:`, error);
+      // No lanzar error para no fallar la creación del pago
+    }
+
     return pagoCreado;
   }
 
@@ -298,6 +307,14 @@ export class PagosRepository {
       throw new Error('Error al recuperar el pago actualizado');
     }
 
+    // Actualizar los totales de la reserva después de actualizar el pago
+    try {
+      await updateTotalesReservaService.actualizarTotales(pagoActualizado.id_reserva);
+    } catch (error) {
+      console.warn(`Advertencia: No se pudieron actualizar los totales de la reserva ${pagoActualizado.id_reserva}:`, error);
+      // No lanzar error para no fallar la actualización del pago
+    }
+
     return pagoActualizado;
   }
 
@@ -305,11 +322,25 @@ export class PagosRepository {
    * Elimina un pago (eliminación física)
    */
   static async deletePago(id: number): Promise<void> {
+    // Primero obtener información del pago para actualizar totales después
+    const pagoAEliminar = await this.getPagoById(id);
+    if (!pagoAEliminar) {
+      throw new Error('Pago no encontrado');
+    }
+
     const query = 'DELETE FROM pagos WHERE id = $1';
     const { rowCount } = await pool.query(query, [id]);
     
     if (rowCount === 0) {
       throw new Error('Pago no encontrado o ya eliminado');
+    }
+
+    // Actualizar los totales de la reserva después de eliminar el pago
+    try {
+      await updateTotalesReservaService.actualizarTotales(pagoAEliminar.id_reserva);
+    } catch (error) {
+      console.warn(`Advertencia: No se pudieron actualizar los totales de la reserva ${pagoAEliminar.id_reserva}:`, error);
+      // No lanzar error para no fallar la eliminación del pago
     }
   }
 
