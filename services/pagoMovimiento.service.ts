@@ -1,7 +1,8 @@
 import { MovimientosRepository } from '../repositories/movimientos.repository';
 import { PagosRepository } from '../repositories/pagos.repository';
-import { CreateMovimientoData } from '../interfaces/movimiento.interface';
+import { CreateMovimientoData, Movimiento } from '../interfaces/movimiento.interface';
 import { Pago } from '../interfaces/pago.interface';
+import pool from '../libs/db';
 
 /**
  * Servicio para manejar la integración entre pagos y movimientos
@@ -14,51 +15,86 @@ export class PagoMovimientoService {
    */
   static async crearMovimientoDesdePago(pago: Pago, idInmueble: string): Promise<string | null> {
     try {
-      // Obtener información adicional de la reserva si es necesario
-      const resumenReserva = await PagosRepository.getResumenPagosReserva(pago.id_reserva);
+      console.log(`[DEBUG] Iniciando creación de movimiento para pago ID: ${pago.id}, monto: ${pago.monto}`);
       
-      if (!resumenReserva) {
-        throw new Error('No se pudo obtener información de la reserva');
+      // Obtener código de reserva directamente (más eficiente)
+      let codigoReserva = 'RES-' + pago.id_reserva; // Valor por defecto
+      
+      try {
+        const reservaQuery = `SELECT codigo_reserva FROM reservas WHERE id_reserva = $1`;
+        const { rows } = await pool.query(reservaQuery, [pago.id_reserva]);
+        if (rows.length > 0) {
+          codigoReserva = rows[0].codigo_reserva;
+        }
+        console.log(`[DEBUG] Código de reserva obtenido: ${codigoReserva}`);
+      } catch (reservaError) {
+        console.warn(`[DEBUG] No se pudo obtener código de reserva, usando valor por defecto: ${codigoReserva}`);
       }
 
       const movimientoData: CreateMovimientoData = {
         fecha: pago.fecha_pago,
         tipo: 'ingreso',
         concepto: PagoMovimientoService.mapearConceptoPagoAMovimiento(pago.concepto),
-        descripcion: PagoMovimientoService.generarDescripcionMovimiento(pago, resumenReserva.codigo_reserva),
+        descripcion: PagoMovimientoService.generarDescripcionMovimiento(pago, codigoReserva),
         monto: pago.monto,
         id_inmueble: idInmueble,
         id_reserva: pago.id_reserva.toString(),
         metodo_pago: pago.metodo_pago,
         comprobante: pago.comprobante || null,
         id_empresa: pago.id_empresa.toString(),
-        plataforma_origen: null // TODO: Obtener de la reserva si está disponible
+        plataforma_origen: null, // TODO: Obtener de la reserva si está disponible
+        id_pago: pago.id // Relacionar el movimiento con el pago
       };
 
+      console.log(`[DEBUG] Datos del movimiento a crear:`, movimientoData);
+
       const movimiento = await MovimientosRepository.createMovimiento(movimientoData);
+      console.log(`[DEBUG] Movimiento creado exitosamente:`, { id: movimiento.id, monto: movimiento.monto });
+      
       return movimiento.id || null;
 
     } catch (error) {
       console.error('Error al crear movimiento desde pago:', error);
+      console.error('Stack trace:', error);
       return null;
     }
   }
 
   /**
-   * Elimina un movimiento asociado a un pago
+   * Obtiene movimientos asociados a un pago específico
    */
-  static async eliminarMovimientoAsociado(pagoId: number): Promise<boolean> {
+  static async obtenerMovimientosAsociados(pagoId: number): Promise<Movimiento[]> {
     try {
-      // TODO: Implementar búsqueda de movimiento por ID de pago
-      // Por ahora, necesitamos agregar un campo id_pago a la tabla movimientos
-      // o implementar una tabla de relación
+      return await MovimientosRepository.getMovimientosByPago(pagoId);
+    } catch (error) {
+      console.error('Error al obtener movimientos asociados al pago:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Elimina movimientos asociados a un pago específico
+   */
+  static async eliminarMovimientoAsociado(pagoId: number): Promise<{
+    movimientos_eliminados: number;
+    movimientos_encontrados: string[];
+  }> {
+    try {
+      // Primero obtener los movimientos asociados para registro
+      const movimientosAsociados = await MovimientosRepository.getMovimientosByPago(pagoId);
+      const idsMovimientos = movimientosAsociados.map(m => m.id!);
       
-      console.log(`TODO: Eliminar movimiento asociado al pago ${pagoId}`);
-      return true;
+      // Eliminar los movimientos asociados al pago
+      const cantidadEliminados = await MovimientosRepository.deleteMovimientosByPago(pagoId);
+
+      return {
+        movimientos_eliminados: cantidadEliminados,
+        movimientos_encontrados: idsMovimientos
+      };
 
     } catch (error) {
-      console.error('Error al eliminar movimiento asociado:', error);
-      return false;
+      console.error('Error al eliminar movimientos asociados al pago:', error);
+      throw error;
     }
   }
 
@@ -96,12 +132,29 @@ export class PagoMovimientoService {
    */
   static async obtenerInmuebleDeReserva(idReserva: number): Promise<string | null> {
     try {
-      // TODO: Implementar consulta para obtener id_inmueble de la reserva
-      // Por ahora retornamos un valor por defecto
-      return '1';
+      console.log(`[DEBUG] Buscando inmueble para reserva ID: ${idReserva}`);
+      
+      const query = `
+        SELECT id_inmueble::text as id_inmueble 
+        FROM reservas 
+        WHERE id_reserva = $1
+      `;
+      
+      const { rows } = await pool.query(query, [idReserva]);
+      console.log(`[DEBUG] Consulta inmueble ejecutada, filas encontradas: ${rows.length}`);
+      
+      if (rows.length === 0) {
+        console.warn(`[DEBUG] No se encontró la reserva ${idReserva} en la tabla reservas`);
+        return null;
+      }
+      
+      const inmuebleId = rows[0].id_inmueble;
+      console.log(`[DEBUG] ID inmueble encontrado: ${inmuebleId}`);
+      return inmuebleId;
       
     } catch (error) {
       console.error('Error al obtener inmueble de reserva:', error);
+      console.error('Error details:', error);
       return null;
     }
   }

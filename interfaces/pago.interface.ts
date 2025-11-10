@@ -74,9 +74,9 @@ export interface DeletePagoResult {
     monto: number;
     codigo_reserva: string;
   };
-  movimiento_eliminado?: {
-    id: string;
-    tipo: 'ingreso';
+  movimientos_eliminados: {
+    cantidad: number;
+    ids: string[];
   };
   resumen_actualizado: {
     total_pagado: number;

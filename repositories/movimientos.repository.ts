@@ -30,7 +30,8 @@ export class MovimientosRepository {
         m.id_empresa,
         m.fecha_creacion,
         m.fecha_actualizacion,
-        m.plataforma_origen
+        m.plataforma_origen,
+        m.id_pago
       FROM movimientos m
       LEFT JOIN inmuebles i ON m.id_inmueble = i.id_inmueble::text
       LEFT JOIN reservas r ON m.id_reserva = r.id_reserva::text
@@ -72,7 +73,8 @@ export class MovimientosRepository {
         m.id_empresa,
         m.fecha_creacion,
         m.fecha_actualizacion,
-        m.plataforma_origen
+        m.plataforma_origen,
+        m.id_pago
       FROM movimientos m
       LEFT JOIN inmuebles i ON m.id_inmueble = i.id_inmueble::text
       LEFT JOIN reservas r ON m.id_reserva = r.id_reserva::text
@@ -131,9 +133,9 @@ export class MovimientosRepository {
       INSERT INTO movimientos (
         id, fecha, tipo, concepto, descripcion, monto, 
         id_inmueble, id_reserva, metodo_pago, comprobante, 
-        id_empresa, fecha_creacion, fecha_actualizacion, plataforma_origen
+        id_empresa, fecha_creacion, fecha_actualizacion, plataforma_origen, id_pago
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW(), $12)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW(), $12, $13)
       RETURNING *
     `;
     
@@ -149,7 +151,8 @@ export class MovimientosRepository {
       data.metodo_pago,
       data.comprobante,
       data.id_empresa,
-      data.plataforma_origen
+      data.plataforma_origen,
+      data.id_pago
     ];
     
     const { rows } = await pool.query(query, values);
@@ -179,7 +182,8 @@ export class MovimientosRepository {
         m.id_empresa,
         m.fecha_creacion,
         m.fecha_actualizacion,
-        m.plataforma_origen
+        m.plataforma_origen,
+        m.id_pago
       FROM movimientos m
       LEFT JOIN inmuebles i ON m.id_inmueble = i.id_inmueble::text
       LEFT JOIN reservas r ON m.id_reserva = r.id_reserva::text
@@ -244,6 +248,10 @@ export class MovimientosRepository {
       setFields.push(`plataforma_origen = $${paramIndex++}`);
       values.push(data.plataforma_origen);
     }
+    if (data.id_pago !== undefined) {
+      setFields.push(`id_pago = $${paramIndex++}`);
+      values.push(data.id_pago);
+    }
 
     if (setFields.length === 0) {
       throw new Error('No hay campos para actualizar');
@@ -280,6 +288,50 @@ export class MovimientosRepository {
     if (rowCount === 0) {
       throw new Error('Movimiento no encontrado');
     }
+  }
+
+  /**
+   * Busca movimientos asociados a un pago específico
+   */
+  static async getMovimientosByPago(pagoId: number): Promise<Movimiento[]> {
+    const query = `
+      SELECT 
+        m.id,
+        m.fecha,
+        m.tipo,
+        m.concepto,
+        m.descripcion,
+        m.monto,
+        m.id_inmueble,
+        i.nombre as nombre_inmueble,
+        m.id_reserva,
+        r.codigo_reserva as codigo_reserva,
+        m.metodo_pago,
+        m.comprobante,
+        m.id_empresa,
+        m.fecha_creacion,
+        m.fecha_actualizacion,
+        m.plataforma_origen,
+        m.id_pago
+      FROM movimientos m
+      LEFT JOIN inmuebles i ON m.id_inmueble = i.id_inmueble::text
+      LEFT JOIN reservas r ON m.id_reserva = r.id_reserva::text
+      WHERE m.id_pago = $1
+      ORDER BY m.fecha_creacion DESC
+    `;
+    
+    const { rows } = await pool.query(query, [pagoId]);
+    return rows;
+  }
+
+  /**
+   * Elimina movimientos asociados a un pago específico
+   */
+  static async deleteMovimientosByPago(pagoId: number): Promise<number> {
+    const query = 'DELETE FROM movimientos WHERE id_pago = $1';
+    const { rowCount } = await pool.query(query, [pagoId]);
+    
+    return rowCount || 0;
   }
 
   /**

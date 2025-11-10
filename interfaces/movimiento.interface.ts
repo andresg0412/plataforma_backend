@@ -16,6 +16,8 @@ export interface Movimiento {
   fecha_actualizacion?: Date; // TIMESTAMP - Fecha de actualización
   // Campo de plataforma de origen (opcional)
   plataforma_origen?: string | null;
+  // ID del pago que generó este movimiento (si aplica)
+  id_pago?: number | null;
 }
 
 export interface CreateMovimientoData {
@@ -31,6 +33,8 @@ export interface CreateMovimientoData {
   id_empresa: string;
   // Campo de plataforma de origen (opcional)
   plataforma_origen?: string | null;
+  // ID del pago que generó este movimiento (si aplica)
+  id_pago?: number | null;
 }
 
 export interface EditMovimientoData {
@@ -45,6 +49,8 @@ export interface EditMovimientoData {
   comprobante?: string | null;
   // Campo de plataforma de origen (opcional)
   plataforma_origen?: string | null;
+  // ID del pago que generó este movimiento (si aplica)
+  id_pago?: number | null;
 }
 
 export interface MovimientosQueryParams {

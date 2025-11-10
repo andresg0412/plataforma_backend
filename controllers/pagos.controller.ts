@@ -157,15 +157,25 @@ export class PagosController {
       let movimientoId: string | undefined;
       
       try {
+        console.log(`[DEBUG] Creando movimiento para pago ID: ${pagoCreado.id}, reserva: ${pagoData.id_reserva}`);
+        
         // Obtener el ID del inmueble de la reserva
         const idInmueble = await PagoMovimientoService.obtenerInmuebleDeReserva(pagoData.id_reserva);
+        console.log(`[DEBUG] ID inmueble obtenido: ${idInmueble}`);
         
         if (idInmueble) {
           const movimientoIdResult = await PagoMovimientoService.crearMovimientoDesdePago(pagoCreado, idInmueble);
+          console.log(`[DEBUG] Resultado creación movimiento: ${movimientoIdResult}`);
+          
           if (movimientoIdResult) {
             movimientoId = movimientoIdResult;
             movimientoCreado = true;
+            console.log(`[DEBUG] Movimiento creado exitosamente con ID: ${movimientoId}`);
+          } else {
+            console.warn(`[DEBUG] No se pudo crear el movimiento para el pago ${pagoCreado.id}`);
           }
+        } else {
+          console.warn(`[DEBUG] No se pudo obtener el inmueble para la reserva ${pagoData.id_reserva}`);
         }
       } catch (movimientoError) {
         console.error('Error al crear movimiento asociado:', movimientoError);
@@ -272,16 +282,15 @@ export class PagosController {
         return responseHelper.error(reply, 'Pago no encontrado', 404);
       }
 
-      // Intentar eliminar movimiento asociado si existe
-      let movimientoEliminado = false;
-      let movimientoId: string | undefined;
+      // Eliminar movimientos asociados al pago
+      let movimientosEliminados = { movimientos_eliminados: 0, movimientos_encontrados: [] as string[] };
       
       try {
-        // TODO: Buscar y eliminar movimiento asociado
-        // Por ahora solo eliminamos el pago
+        movimientosEliminados = await PagoMovimientoService.eliminarMovimientoAsociado(id);
+        console.log(`Eliminados ${movimientosEliminados.movimientos_eliminados} movimientos asociados al pago ${id}`);
       } catch (movimientoError) {
-        console.error('Error al eliminar movimiento asociado:', movimientoError);
-        // No fallar la eliminación del pago si falla la eliminación del movimiento
+        console.error('Error al eliminar movimientos asociados:', movimientoError);
+        // Continuar con la eliminación del pago aunque falle la eliminación del movimiento
       }
 
       // Eliminar el pago
@@ -296,17 +305,21 @@ export class PagosController {
           monto: pagoAEliminar.monto,
           codigo_reserva: pagoAEliminar.codigo_reserva
         },
-        movimiento_eliminado: movimientoEliminado ? {
-          id: movimientoId!,
-          tipo: 'ingreso'
-        } : undefined,
+        movimientos_eliminados: {
+          cantidad: movimientosEliminados.movimientos_eliminados,
+          ids: movimientosEliminados.movimientos_encontrados
+        },
         resumen_actualizado: {
           total_pagado: resumenActualizado?.total_pagado || 0,
           total_pendiente: resumenActualizado?.total_pendiente || 0
         }
       };
 
-      return responseHelper.success(reply, resultado, 'Pago eliminado exitosamente');
+      const mensaje = movimientosEliminados.movimientos_eliminados > 0 
+        ? `Pago y ${movimientosEliminados.movimientos_eliminados} movimiento(s) asociado(s) eliminados exitosamente`
+        : 'Pago eliminado exitosamente (sin movimientos asociados)';
+      
+      return responseHelper.success(reply, resultado, mensaje);
 
     } catch (error) {
       console.error('Error al eliminar pago:', error);
