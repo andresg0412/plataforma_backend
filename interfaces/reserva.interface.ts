@@ -24,8 +24,8 @@ export interface Reserva {
   id_inmueble: number;
   nombre_inmueble: string;
   huesped_principal: HuespedPrincipal;
-  fecha_entrada: string;
-  fecha_salida: string;
+  fecha_inicio: string;
+  fecha_fin: string;
   numero_huespedes: number;
   huespedes: Huesped[];
   precio_total: number;
@@ -67,8 +67,8 @@ export interface CreateHuespedData {
 
 export interface CreateReservaRequest {
   id_inmueble: number;
-  fecha_entrada: string;
-  fecha_salida: string;
+  fecha_inicio: string;
+  fecha_fin: string;
   numero_huespedes: number;
   huespedes: CreateHuespedData[];
   precio_total: number;
@@ -89,8 +89,8 @@ export interface CreateReservaResponse {
 }
 
 export interface EditReservaRequest {
-  fecha_entrada?: string;
-  fecha_salida?: string;
+  fecha_inicio?: string;
+  fecha_fin?: string;
   numero_huespedes?: number;
   huespedes?: CreateHuespedData[];
   precio_total?: number;

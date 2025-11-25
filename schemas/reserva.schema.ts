@@ -33,8 +33,8 @@ export const getReservasSchema: FastifySchema = {
                   telefono: { type: 'string' }
                 }
               },
-              fecha_entrada: { type: 'string' },
-              fecha_salida: { type: 'string' },
+              fecha_inicio: { type: 'string' },
+              fecha_fin: { type: 'string' },
               numero_huespedes: { type: 'number' },
               huespedes: {
                 type: 'array',
@@ -77,8 +77,8 @@ export const createReservaSchema: FastifySchema = {
     type: 'object',
     required: [
       'id_inmueble',
-      'fecha_entrada',
-      'fecha_salida',
+      'fecha_inicio',
+      'fecha_fin',
       'numero_huespedes',
       'huespedes',
       'precio_total',
@@ -88,8 +88,8 @@ export const createReservaSchema: FastifySchema = {
     ],
     properties: {
       id_inmueble: { type: 'number' },
-      fecha_entrada: { type: 'string', format: 'date' },
-      fecha_salida: { type: 'string', format: 'date' },
+      fecha_inicio: { type: 'string', format: 'date' },
+      fecha_fin: { type: 'string', format: 'date' },
       numero_huespedes: { type: 'number', minimum: 1 },
       huespedes: {
         type: 'array',
@@ -151,8 +151,8 @@ export const createReservaSchema: FastifySchema = {
                 telefono: { type: 'string' }
               }
             },
-            fecha_entrada: { type: 'string' },
-            fecha_salida: { type: 'string' },
+            fecha_inicio: { type: 'string' },
+            fecha_fin: { type: 'string' },
             numero_huespedes: { type: 'number' },
             huespedes: {
               type: 'array',
@@ -194,8 +194,8 @@ export const editReservaSchema: FastifySchema = {
     type: 'object',
     minProperties: 1,
     properties: {
-      fecha_entrada: { type: 'string', format: 'date' },
-      fecha_salida: { type: 'string', format: 'date' },
+      fecha_inicio: { type: 'string', format: 'date' },
+      fecha_fin: { type: 'string', format: 'date' },
       numero_huespedes: { type: 'number', minimum: 1 },
       huespedes: {
         type: 'array',

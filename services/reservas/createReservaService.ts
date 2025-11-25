@@ -93,7 +93,7 @@ export class CreateReservaService {
   async execute(requestData: CreateReservaRequest): Promise<Reserva> {
     try {
       // 1. Validaciones básicas de reserva
-      this.validateDates(requestData.fecha_entrada, requestData.fecha_salida);
+      this.validateDates(requestData.fecha_inicio, requestData.fecha_fin);
       this.validatePrecio(requestData.precio_total);
       this.validateCamposFinancieros(requestData.total_reserva, requestData.total_pagado);
       this.validateNumeroHuespedes(requestData.numero_huespedes);
@@ -117,8 +117,8 @@ export class CreateReservaService {
       // 4. Crear la reserva
       const nuevaReserva = await this.reservasRepository.createReserva({
         id_inmueble: requestData.id_inmueble,
-        fecha_entrada: requestData.fecha_entrada,
-        fecha_salida: requestData.fecha_salida,
+        fecha_inicio: requestData.fecha_inicio,
+        fecha_fin: requestData.fecha_fin,
         estado: requestData.estado,
         codigo_reserva: codigoReserva,
         precio_total: requestData.precio_total,

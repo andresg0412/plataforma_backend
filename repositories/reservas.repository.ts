@@ -12,8 +12,8 @@ export class ReservasRepository {
         SELECT 
           r.id_reserva as id,
           r.codigo_reserva,
-          r.fecha_inicio as fecha_entrada,
-          r.fecha_fin as fecha_salida,
+          r.fecha_inicio as fecha_inicio,
+          r.fecha_fin as fecha_fin,
           r.estado,
           r.created_at as fecha_creacion,
           r.precio_total,
@@ -164,8 +164,8 @@ export class ReservasRepository {
    */
   async createReserva(reservaData: {
     id_inmueble: number;
-    fecha_entrada: string;
-    fecha_salida: string;
+    fecha_inicio: string;
+    fecha_fin: string;
     estado: string;
     codigo_reserva: string;
     precio_total: number;
@@ -197,8 +197,8 @@ export class ReservasRepository {
       
       const values = [
         reservaData.id_inmueble,
-        reservaData.fecha_entrada,
-        reservaData.fecha_salida,
+        reservaData.fecha_inicio,
+        reservaData.fecha_fin,
         reservaData.estado,
         reservaData.codigo_reserva,
         reservaData.precio_total,
@@ -388,8 +388,8 @@ export class ReservasRepository {
         SELECT 
           r.id_reserva as id,
           r.codigo_reserva,
-          r.fecha_inicio as fecha_entrada,
-          r.fecha_fin as fecha_salida,
+          r.fecha_inicio as fecha_inicio,
+          r.fecha_fin as fecha_fin,
           r.estado,
           r.created_at as fecha_creacion,
           r.precio_total,
@@ -421,27 +421,34 @@ export class ReservasRepository {
    */
   async updateReserva(id: number, fields: Partial<Omit<Reserva, 'id' | 'codigo_reserva'>>): Promise<Reserva | null> {
     if (!id || Object.keys(fields).length === 0) return null;
-    const allowedFields = [
-      'fecha_entrada',
-      'fecha_salida',
-      'numero_huespedes',
-      'precio_total',
-      'estado',
-      'observaciones',
-      'plataforma_origen'
-    ];
+    // Mapeo de campos del modelo a la base de datos
+    console.log('Updating reserva id:', id, 'with fields:', fields);
+    const fieldMap: Record<string, string> = {
+      fecha_inicio: 'fecha_inicio',
+      fecha_fin: 'fecha_fin',
+      numero_huespedes: 'numero_huespedes',
+      precio_total: 'precio_total',
+      estado: 'estado',
+      observaciones: 'observaciones',
+      plataforma_origen: 'plataforma_origen',
+    };
+    const allowedFields = Object.keys(fieldMap);
+    console.log('Allowed fields for update:', allowedFields);
     const setClauses: string[] = [];
     const values: any[] = [];
     let idx = 1;
     for (const key of allowedFields) {
       if (fields[key as keyof typeof fields] !== undefined) {
-        setClauses.push(`${key} = $${idx}`);
+        setClauses.push(`${fieldMap[key]} = $${idx}`);
         values.push(fields[key as keyof typeof fields]);
         idx++;
       }
     }
+    console.log('Set clauses for update:', setClauses);
     if (setClauses.length === 0) return null;
     values.push(id);
+    console.log('Final query:', `UPDATE reservas SET ${setClauses.join(', ')} WHERE id_reserva = $${idx} RETURNING *`);
+    console.log('With values:', values);
     const query = `UPDATE reservas SET ${setClauses.join(', ')} WHERE id_reserva = $${idx} RETURNING *`;
     const { rows } = await dbClient.query(query, values);
     return rows[0] || null;

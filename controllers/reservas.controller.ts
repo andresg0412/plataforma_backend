@@ -99,6 +99,8 @@ export class ReservasController {
     try {
       const id = Number((request.params as any).id);
       const data = request.body as EditReservaRequest;
+      console.log('Request params id:', request.params);
+      console.log('Request body data:', data);
       if (!id || isNaN(id)) {
         return reply.code(400).send(errorResponse({ message: 'ID de reserva inválido', code: 400 }));
       }
