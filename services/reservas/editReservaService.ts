@@ -13,7 +13,6 @@ export async function editReservaService(id: number, data: EditReservaRequest) {
     'precio_total',
     'estado',
     'observaciones',
-    'id_empresa',
     'plataforma_origen'
   ];
   

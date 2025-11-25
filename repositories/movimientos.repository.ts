@@ -12,7 +12,7 @@ export class MovimientosRepository {
   /**
    * Obtiene movimientos por fecha y empresa
    */
-  static async getMovimientosByFecha(fecha: string, empresaId: string, plataformaOrigen?: string): Promise<Movimiento[]> {
+  static async getMovimientosByFecha(fecha: string, empresaId?: string, plataformaOrigen?: string): Promise<Movimiento[]> {
     let query = `
       SELECT 
         m.id,
@@ -35,19 +35,18 @@ export class MovimientosRepository {
       FROM movimientos m
       LEFT JOIN inmuebles i ON m.id_inmueble = i.id_inmueble::text
       LEFT JOIN reservas r ON m.id_reserva = r.id_reserva::text
-      WHERE m.fecha = $1 AND m.id_empresa = $2
+      WHERE m.fecha = $1
     `;
-    
-    const params: any[] = [fecha, empresaId];
-    
-    // Agregar filtro por plataforma si se especifica
+    const params: any[] = [fecha];
+    if (empresaId) {
+      query += ` AND m.id_empresa = $${params.length + 1}`;
+      params.push(empresaId);
+    }
     if (plataformaOrigen) {
-      query += ` AND m.plataforma_origen = $3`;
+      query += ` AND m.plataforma_origen = $${params.length + 1}`;
       params.push(plataformaOrigen);
     }
-    
     query += ` ORDER BY m.fecha_creacion DESC`;
-    
     const { rows } = await pool.query(query, params);
     return rows;
   }
@@ -89,8 +88,8 @@ export class MovimientosRepository {
   /**
    * Obtiene resumen diario por fecha y empresa
    */
-  static async getResumenDiario(fecha: string, empresaId: string): Promise<ResumenDiario | null> {
-    const query = `
+  static async getResumenDiario(fecha: string, empresaId?: string): Promise<ResumenDiario | null> {
+    let query = `
       SELECT 
         fecha,
         SUM(CASE WHEN tipo = 'ingreso' THEN monto ELSE 0 END) as total_ingresos,
@@ -98,12 +97,15 @@ export class MovimientosRepository {
         SUM(CASE WHEN tipo = 'ingreso' THEN monto ELSE -monto END) as balance,
         COUNT(*) as cantidad_movimientos
       FROM movimientos 
-      WHERE fecha = $1 AND id_empresa = $2
-      GROUP BY fecha
+      WHERE fecha = $1
     `;
-    
-    const { rows } = await pool.query(query, [fecha, empresaId]);
-    
+    const params: any[] = [fecha];
+    if (empresaId) {
+      query += ' AND id_empresa = $2';
+      params.push(empresaId);
+    }
+    query += ' GROUP BY fecha';
+    const { rows } = await pool.query(query, params);
     if (rows.length === 0) {
       return {
         fecha,
@@ -113,7 +115,6 @@ export class MovimientosRepository {
         cantidad_movimientos: 0
       };
     }
-    
     return {
       fecha: rows[0].fecha,
       total_ingresos: parseFloat(rows[0].total_ingresos) || 0,

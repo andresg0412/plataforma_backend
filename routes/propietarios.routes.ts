@@ -4,8 +4,7 @@ import { authMiddleware } from '../middlewares/authMiddleware';
 
 export async function propietariosRoutes(server: FastifyInstance, opts: FastifyPluginOptions) {
   // GET /api/propietarios/getPropietarios
-  //server.get('/getPropietarios', { preHandler: [authMiddleware] }, propietarioController.getPropietarios);
-  server.get('/getPropietarios', propietarioController.getPropietarios);
+  server.get('/getPropietarios', { preHandler: [authMiddleware] }, propietarioController.getPropietarios);
   // POST /api/propietarios/createPropietario
   server.post('/createPropietario', { preHandler: [authMiddleware] }, propietarioController.createPropietario);
   

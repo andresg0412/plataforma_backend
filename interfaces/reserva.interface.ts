@@ -99,7 +99,6 @@ export interface EditReservaRequest {
   total_pagado?: number;
   estado?: string;
   observaciones?: string;
-  id_empresa?: number;
   // Campo de plataforma de origen (opcional)
   plataforma_origen?: string;
 }

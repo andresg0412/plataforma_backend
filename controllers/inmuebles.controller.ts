@@ -15,8 +15,6 @@ import {
 export const inmueblesController = {
   getInmuebles: async (req: FastifyRequest, reply: FastifyReply) => {
     const ctx = req.userContext;
-    
-    // Verificar que el usuario esté autenticado
     if (!ctx || !ctx.id) {
       return reply.status(401).send(
         errorResponse({ 
@@ -26,7 +24,6 @@ export const inmueblesController = {
         })
       );
     }
-
     try {
       // Validar query parameters usando Zod schema
       const queryValidation = InmueblesQuerySchema.safeParse(req.query);
@@ -39,12 +36,26 @@ export const inmueblesController = {
           })
         );
       }
-
-      const { id_empresa, id } = queryValidation.data;
-
+      const { id } = queryValidation.data;
+      // Lógica superadmin: si es superadmin y empresaId es null, no filtrar por empresa
+      let id_empresa: number | undefined;
+      if (ctx.id_roles === 1 && (ctx.empresaId === null || ctx.empresaId === undefined)) {
+        // superadmin: no filtrar por empresa
+        id_empresa = undefined;
+      } else {
+        if (!ctx.empresaId) {
+          return reply.status(401).send(
+            errorResponse({ 
+              message: 'No autenticado o token inválido', 
+              code: 401, 
+              error: 'Unauthorized' 
+            })
+          );
+        }
+        id_empresa = Number(ctx.empresaId);
+      }
       // Llamar al servicio para obtener los inmuebles
       const { data, error } = await getInmueblesService(ctx, id_empresa, id);
-      
       if (error) {
         return reply.status(error.status || 500).send(
           errorResponse({ 
@@ -54,7 +65,6 @@ export const inmueblesController = {
           })
         );
       }
-
       return reply.send(successResponse(data));
     } catch (err) {
       return reply.status(500).send(
@@ -83,7 +93,6 @@ export const inmueblesController = {
 
       // Validar datos del body
       const bodyValidation = CreateInmuebleSchema.safeParse(req.body);
-      
       if (!bodyValidation.success) {
         console.error('Error al validar datos del inmueble:', bodyValidation.error);
         return reply.status(400).send(
@@ -94,18 +103,10 @@ export const inmueblesController = {
           })
         );
       }
-
-      const inmuebleData = bodyValidation.data;
-
-      console.log('Creando inmueble:', { 
-        nombre: inmuebleData.nombre, 
-        direccion: inmuebleData.direccion,
-        id_propietario: inmuebleData.id_propietario,
-        id_empresa: inmuebleData.id_empresa 
-      });
-      
-      // Llamar al servicio
-      const { data, error } = await createInmuebleService(Number(ctx.id), inmuebleData);
+  // Forzar id_empresa del usuario autenticado
+  const inmuebleData = { ...bodyValidation.data, id_empresa: Number(ctx.empresaId) };
+  // Llamar al servicio
+  const { data, error } = await createInmuebleService(Number(ctx.id), inmuebleData);
       
       if (error) {
         console.error('Error al crear inmueble:', error);
@@ -180,7 +181,7 @@ export const inmueblesController = {
       }
 
       const { id: inmuebleId } = queryValidation.data;
-      const inmuebleData = bodyValidation.data;
+  const inmuebleData = { ...bodyValidation.data, id_empresa: Number(ctx.empresaId) };
 
       console.log('Editando inmueble:', { 
         inmuebleId,

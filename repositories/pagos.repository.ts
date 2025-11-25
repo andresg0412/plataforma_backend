@@ -166,9 +166,9 @@ export class PagosRepository {
     }
 
     // Validar que la reserva pertenece a la empresa
-    if (reservaInfo.id_empresa !== data.id_empresa) {
-      throw new Error('La reserva no pertenece a la empresa especificada');
-    }
+    //if (reservaInfo.id_empresa !== data.id_empresa) {
+    //  throw new Error('La reserva no pertenece a la empresa especificada');
+    //}
 
     // Obtener el total ya pagado para esta reserva
     const totalPagadoActual = await this.getTotalPagadoReserva(data.id_reserva);

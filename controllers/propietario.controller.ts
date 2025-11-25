@@ -14,9 +14,13 @@ import {
 export const propietarioController = {
   getPropietarios: async (req: FastifyRequest, reply: FastifyReply) => {
     try {
+      // Verificar autenticación
+      const ctx = req.userContext;
+      if (!ctx || !ctx.id) {
+        return reply.status(401).send(errorResponse({ message: 'No autenticado', code: 401 }));
+      }
       // Validar query parameters
       const queryValidation = GetPropietariosQuerySchema.safeParse(req.query);
-      
       if (!queryValidation.success) {
         console.error('Error al validar query params:', queryValidation.error);
         return reply.status(400).send(
@@ -27,11 +31,15 @@ export const propietarioController = {
           })
         );
       }
-
-      const { id_empresa } = queryValidation.data;
-
+      // Lógica superadmin: si es superadmin y empresaId es null, mostrar todos
+      let id_empresa: number | undefined = undefined;
+      if (!(ctx.id_roles === 1 && (ctx.empresaId === null || ctx.empresaId === undefined))) {
+        if (!ctx.empresaId) {
+          return reply.status(401).send(errorResponse({ message: 'No autenticado o token inválido', code: 401 }));
+        }
+        id_empresa = Number(ctx.empresaId);
+      }
       console.log('Obteniendo propietarios con filtros:', { id_empresa });
-      
       // Llamar al servicio
       const { data, error } = await getPropietariosService(id_empresa);
       
@@ -89,14 +97,13 @@ export const propietarioController = {
         );
       }
 
-      const propietarioData = bodyValidation.data;
-
+      // Forzar id_empresa del usuario autenticado
+      const propietarioData = { ...bodyValidation.data, id_empresa: Number(ctx.empresaId) };
       console.log('Creando propietario:', { 
         email: propietarioData.email, 
         nombre: propietarioData.nombre,
         id_empresa: propietarioData.id_empresa 
       });
-      
       // Llamar al servicio
       const { data, error } = await createPropietarioService(Number(ctx.id), propietarioData);
       
@@ -173,7 +180,8 @@ export const propietarioController = {
       }
 
       const { id: propietarioId } = queryValidation.data;
-      const propietarioData = bodyValidation.data;
+  // Forzar id_empresa del usuario autenticado
+  const propietarioData = { ...bodyValidation.data, id_empresa: Number(ctx.empresaId) };
 
       console.log('Editando propietario:', { 
         propietarioId,

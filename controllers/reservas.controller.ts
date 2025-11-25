@@ -6,35 +6,42 @@ import { GetReservasQuery, CreateReservaRequest, EditReservaRequest } from '../i
 import { successResponse, errorResponse } from '../libs/responseHelper';
 
 export class ReservasController {
-  
   /**
    * Controlador para obtener reservas
    * GET /reservas
    */
   async getReservas(request: FastifyRequest, reply: FastifyReply) {
     try {
+      const ctx = (request as any).userContext || (request as any).user?.userContext;
+      if (!ctx) {
+        return reply.code(401).send(errorResponse({ message: 'No autenticado o token inválido', code: 401 }));
+      }
       const getReservasService = new GetReservasService();
       const filters = request.query as GetReservasQuery;
-      
-      // Ejecutar el servicio
+      // Lógica superadmin: si es superadmin y empresaId es null, no filtrar por empresa
+      if (ctx.id_roles === 1 && (ctx.empresaId === null || ctx.empresaId === undefined)) {
+        // superadmin: no filtrar por empresa
+        delete filters.id_empresa;
+      } else {
+        const id_empresa = ctx.empresaId;
+        if (!id_empresa) {
+          return reply.code(401).send(errorResponse({ message: 'No autenticado o token inválido', code: 401 }));
+        }
+        filters.id_empresa = id_empresa;
+      }
       const reservas = await getReservasService.execute(filters);
-      
-      // Respuesta exitosa
       const response = {
         isError: false,
         data: reservas,
         message: 'Reservas obtenidas exitosamente'
       };
-      
       reply.code(200).send(response);
     } catch (error) {
       console.error('Error en ReservasController.getReservas:', error);
-      
       const response = errorResponse({
         message: 'Error interno del servidor',
         code: 500
       });
-      
       reply.code(500).send(response);
     }
   }
@@ -45,29 +52,26 @@ export class ReservasController {
    */
   async createReserva(request: FastifyRequest, reply: FastifyReply) {
     try {
+      const ctx = (request as any).userContext || (request as any).user?.userContext;
+      const id_empresa = ctx?.empresaId;
+      const id_roles = ctx?.id_roles;
+      if (!id_empresa && id_roles !== 1) {
+        return reply.code(401).send(errorResponse({ message: 'No autenticado o token inválido', code: 401 }));
+      }
       const createReservaService = new CreateReservaService();
-      const requestData = request.body as CreateReservaRequest;
-      
-      // Ejecutar el servicio
+      const requestData = { ...(request.body as CreateReservaRequest), id_empresa };
       const nuevaReserva = await createReservaService.execute(requestData);
-      
-      // Respuesta exitosa
       const response = {
         isError: false,
         data: nuevaReserva,
         message: 'Reserva creada exitosamente'
       };
-      
       reply.code(201).send(response);
     } catch (error) {
       console.error('Error en ReservasController.createReserva:', error);
-      
-      // Determinar el código de error apropiado
       let statusCode = 500;
       let message = 'Error interno del servidor';
-      
       if (error instanceof Error) {
-        // Errores de validación devuelven 400
         if (error.message.includes('fecha') || 
             error.message.includes('email') ||
             error.message.includes('precio') ||
@@ -79,12 +83,10 @@ export class ReservasController {
           message = error.message;
         }
       }
-      
       const response = errorResponse({
         message,
         code: statusCode
       });
-      
       reply.code(statusCode).send(response);
     }
   }
@@ -118,7 +120,6 @@ export class ReservasController {
       if (!id || isNaN(id)) {
         return reply.code(400).send(errorResponse({ message: 'ID de reserva inválido', code: 400 }));
       }
-      // Servicio de anulación lógica
       const { deleteReservaService } = await import('../services/reservas/deleteReservaService');
       const result = await deleteReservaService(id);
       return reply.code(200).send(successResponse({ data: result, message: 'Reserva anulada exitosamente' }));
@@ -129,5 +130,5 @@ export class ReservasController {
   }
 }
 
-// Exportar una instancia del controlador
 export const reservasController = new ReservasController();
+      const { deleteReservaService } = await import('../services/reservas/deleteReservaService');

@@ -428,7 +428,6 @@ export class ReservasRepository {
       'precio_total',
       'estado',
       'observaciones',
-      'id_empresa',
       'plataforma_origen'
     ];
     const setClauses: string[] = [];

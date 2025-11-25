@@ -29,13 +29,13 @@ export class PropietarioRepository {
       FROM propietarios p
       LEFT JOIN usuarios u ON p.id_usuario = u.id_usuario
       LEFT JOIN inmuebles i ON p.id_propietario = i.id_propietario
+      WHERE 1=1
     `;
 
     const params: any[] = [];
-    
     if (id_empresa !== undefined) {
-      query += ` AND u.id_empresa = $1`;
       params.push(id_empresa);
+      query += ` AND u.id_empresa = $${params.length}`;
     }
 
     query += `

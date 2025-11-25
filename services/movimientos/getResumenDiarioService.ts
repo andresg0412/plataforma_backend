@@ -14,25 +14,28 @@ interface ServiceResponse<T> {
  * Servicio para obtener resumen diario por fecha y empresa
  */
 export async function getResumenDiarioService(
-  empresaId: string,
+  empresaId: string | null | undefined,
   fecha: string
 ): Promise<ServiceResponse<ResumenDiario>> {
   try {
-    // Verificar que la empresa existe
-    const empresaExists = await MovimientosRepository.existsEmpresa(empresaId);
-    if (!empresaExists) {
-      return {
-        data: null,
-        error: {
-          message: 'Empresa no encontrada',
-          status: 404,
-          details: 'La empresa especificada no existe'
-        }
-      };
+    // Si empresaId está definido y no es vacío, validar existencia
+    if (empresaId && empresaId !== '' && empresaId !== 'null') {
+      const empresaExists = await MovimientosRepository.existsEmpresa(empresaId);
+      if (!empresaExists) {
+        return {
+          data: null,
+          error: {
+            message: 'Empresa no encontrada',
+            status: 404,
+            details: 'La empresa especificada no existe'
+          }
+        };
+      }
     }
 
-    // Obtener resumen
-    const resumen = await MovimientosRepository.getResumenDiario(fecha, empresaId);
+    // Si empresaId es null, undefined o vacío, pasar undefined al repositorio para no filtrar por empresa
+    const empresaIdParam = (empresaId && empresaId !== '' && empresaId !== 'null') ? empresaId : undefined;
+    const resumen = await MovimientosRepository.getResumenDiario(fecha, empresaIdParam);
 
     return {
       data: resumen,

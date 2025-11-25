@@ -8,6 +8,7 @@ import {
   reservaIdSchema,
   estadisticasQuerySchema
 } from '../schemas/pago.schema';
+import { authMiddleware } from '../middlewares/authMiddleware';
 
 export default async function pagosRoutes(fastify: FastifyInstance) {
   // Prefijo para todas las rutas de pagos
@@ -55,7 +56,8 @@ export default async function pagosRoutes(fastify: FastifyInstance) {
   fastify.get(`${routePrefix}/reserva/:id_reserva`, {
     schema: {
       params: reservaIdSchema
-    }
+    },
+    preHandler: [authMiddleware]
   }, PagosController.getPagosByReserva);
 
   /**
@@ -112,7 +114,8 @@ export default async function pagosRoutes(fastify: FastifyInstance) {
   fastify.get(`${routePrefix}`, {
     schema: {
       querystring: pagosQuerySchema
-    }
+    },
+    preHandler: [authMiddleware]
   }, PagosController.getPagosWithFilters);
 
   /**
@@ -138,7 +141,8 @@ export default async function pagosRoutes(fastify: FastifyInstance) {
   fastify.get(`${routePrefix}/:id`, {
     schema: {
       params: pagoIdSchema
-    }
+    },
+    preHandler: [authMiddleware]
   }, PagosController.getPagoById);
 
   /**
@@ -172,7 +176,8 @@ export default async function pagosRoutes(fastify: FastifyInstance) {
   fastify.post(`${routePrefix}`, {
     schema: {
       body: createPagoSchema
-    }
+    },
+    preHandler: [authMiddleware]
   }, PagosController.createPago);
 
   /**
@@ -209,7 +214,8 @@ export default async function pagosRoutes(fastify: FastifyInstance) {
     schema: {
       params: pagoIdSchema,
       body: updatePagoSchema
-    }
+    },
+    preHandler: [authMiddleware]
   }, PagosController.updatePago);
 
   /**
@@ -236,7 +242,8 @@ export default async function pagosRoutes(fastify: FastifyInstance) {
   fastify.delete(`${routePrefix}/:id`, {
     schema: {
       params: pagoIdSchema
-    }
+    },
+    preHandler: [authMiddleware]
   }, PagosController.deletePago);
 
   /**
@@ -273,7 +280,8 @@ export default async function pagosRoutes(fastify: FastifyInstance) {
   fastify.get(`${routePrefix}/reserva/:id_reserva/resumen`, {
     schema: {
       params: reservaIdSchema
-    }
+    },
+    preHandler: [authMiddleware]
   }, PagosController.getResumenReserva);
 
   /**
@@ -296,7 +304,7 @@ export default async function pagosRoutes(fastify: FastifyInstance) {
    *       200:
    *         description: Pagos del día obtenidos exitosamente
    */
-  fastify.get(`${routePrefix}/fecha`, PagosController.getPagosByFecha);
+  fastify.get(`${routePrefix}/fecha`, { preHandler: [authMiddleware] }, PagosController.getPagosByFecha);
 
   /**
    * @swagger
@@ -326,7 +334,8 @@ export default async function pagosRoutes(fastify: FastifyInstance) {
   fastify.get(`${routePrefix}/estadisticas/metodos-pago`, {
     schema: {
       querystring: estadisticasQuerySchema
-    }
+    },
+    preHandler: [authMiddleware]
   }, PagosController.getEstadisticasMetodosPago);
 }
 

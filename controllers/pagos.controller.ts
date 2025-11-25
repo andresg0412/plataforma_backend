@@ -1,4 +1,4 @@
-import { FastifyRequest, FastifyReply } from 'fastify';
+import { FastifyRequest, FastifyReply, RouteGenericInterface } from 'fastify';
 import { PagosRepository } from '../repositories/pagos.repository';
 import { PagoMovimientoService } from '../services/pagoMovimiento.service';
 import { 
@@ -20,36 +20,47 @@ export class PagosController {
    * Obtiene todos los pagos de una reserva específica
    */
   static async getPagosByReserva(
-    request: FastifyRequest<{ Params: { id_reserva: string } }>, 
+    request: FastifyRequest,
     reply: FastifyReply
   ) {
     try {
-      const id_reserva = parseInt(request.params.id_reserva);
-      
+  const id_reserva = parseInt((request as any).params.id_reserva);
       if (isNaN(id_reserva) || id_reserva <= 0) {
         return responseHelper.error(reply, 'ID de reserva inválido', 400);
       }
-      
-      // TODO: Obtener id_empresa del usuario autenticado
-      const id_empresa = 1; // Por ahora hardcodeado
-      
-      // Verificar que la reserva pertenece a la empresa del usuario
-      const reservaExists = await PagosRepository.existsReservaInEmpresa(id_reserva, id_empresa);
-      if (!reservaExists) {
-        return responseHelper.error(reply, 'Reserva no encontrada o no pertenece a su empresa', 404);
+      // Obtener contexto del usuario autenticado
+      const ctx = (request as any).userContext || (request as any).user?.userContext;
+      if (!ctx || !ctx.id) {
+        return responseHelper.error(reply, 'No autenticado o token inválido', 401);
       }
-
+      // Lógica superadmin: si es superadmin y empresaId es null, permitir acceso global
+      let puedeConsultar = false;
+      if (ctx.id_roles === 1 && (ctx.empresaId === null || ctx.empresaId === undefined)) {
+        puedeConsultar = true;
+      } else {
+        const id_empresa = ctx.empresaId;
+        const id_roles = ctx.id_roles;
+        if (!id_empresa && id_roles !== 1) {
+          return responseHelper.error(reply, 'No autenticado o token inválido', 401);
+        }
+        // Verificar que la reserva pertenece a la empresa del usuario
+        const reservaExists = await PagosRepository.existsReservaInEmpresa(id_reserva, id_empresa);
+        if (!reservaExists && id_roles !== 1) {
+          return responseHelper.error(reply, 'Reserva no encontrada o no pertenece a su empresa', 404);
+        }
+        puedeConsultar = true;
+      }
+      if (!puedeConsultar) {
+        return responseHelper.error(reply, 'No autorizado', 403);
+      }
       const pagos = await PagosRepository.getPagosByReserva(id_reserva);
-      
       // Obtener también el resumen financiero
       const resumen = await PagosRepository.getResumenPagosReserva(id_reserva);
-
       return responseHelper.success(reply, {
         pagos,
         resumen,
         total_pagos: pagos.length
       }, `${pagos.length} pagos encontrados para la reserva`);
-
     } catch (error) {
       console.error('Error al obtener pagos de reserva:', error);
       return responseHelper.error(reply, 'Error interno del servidor', 500);
@@ -60,25 +71,30 @@ export class PagosController {
    * Obtiene pagos con filtros y paginación
    */
   static async getPagosWithFilters(
-    request: FastifyRequest<{ Querystring: Record<string, string> }>, 
+    request: FastifyRequest,
     reply: FastifyReply
   ) {
     try {
       // Convertir y validar parámetros de query
+      const query = (request as any).query || {};
       const queryParams: PagosQueryRequest = {
-        id_reserva: request.query.id_reserva ? parseInt(request.query.id_reserva) : undefined,
-        fecha_desde: request.query.fecha_desde,
-        fecha_hasta: request.query.fecha_hasta,
-        metodo_pago: request.query.metodo_pago as any,
-        id_empresa: request.query.id_empresa ? parseInt(request.query.id_empresa) : undefined,
-        page: request.query.page ? parseInt(request.query.page) : 1,
-        limit: request.query.limit ? parseInt(request.query.limit) : 50
+        id_reserva: query.id_reserva ? parseInt(query.id_reserva) : undefined,
+        fecha_desde: query.fecha_desde,
+        fecha_hasta: query.fecha_hasta,
+        metodo_pago: query.metodo_pago as any,
+        id_empresa: query.id_empresa ? parseInt(query.id_empresa) : undefined,
+        page: query.page ? parseInt(query.page) : 1,
+        limit: query.limit ? parseInt(query.limit) : 50
       };
       
-      // TODO: Obtener id_empresa del usuario autenticado
-      if (!queryParams.id_empresa) {
-        queryParams.id_empresa = 1; // Por ahora hardcodeado
+      // Obtener id_empresa del usuario autenticado
+      const ctx = (request as any).userContext || (request as any).user?.userContext;
+      const id_empresa = ctx?.empresaId;
+      const id_roles = ctx?.id_roles;
+      if (!id_empresa && id_roles !== 1) {
+        return responseHelper.error(reply, 'No autenticado o token inválido', 401);
       }
+      queryParams.id_empresa = id_empresa;
 
       const { pagos, total } = await PagosRepository.getPagosWithFilters(queryParams);
       
@@ -105,22 +121,26 @@ export class PagosController {
    * Obtiene un pago específico por ID
    */
   static async getPagoById(
-    request: FastifyRequest<{ Params: { id: string } }>, 
+    request: FastifyRequest,
     reply: FastifyReply
   ) {
     try {
-      const id = parseInt(request.params.id);
+  const id = parseInt((request as any).params.id);
       
       if (isNaN(id) || id <= 0) {
         return responseHelper.error(reply, 'ID de pago inválido', 400);
       }
       
-      // TODO: Obtener id_empresa del usuario autenticado
-      const id_empresa = 1; // Por ahora hardcodeado
-      
+      // Obtener id_empresa del usuario autenticado
+      const ctx = (request as any).userContext || (request as any).user?.userContext;
+      const id_empresa = ctx?.empresaId;
+      const id_roles = ctx?.id_roles;
+      if (!id_empresa && id_roles !== 1) {
+        return responseHelper.error(reply, 'No autenticado o token inválido', 401);
+      }
       // Verificar que el pago pertenece a la empresa del usuario
       const pagoExists = await PagosRepository.existsPagoInEmpresa(id, id_empresa);
-      if (!pagoExists) {
+      if (!pagoExists && id_roles !== 1) {
         return responseHelper.error(reply, 'Pago no encontrado o no pertenece a su empresa', 404);
       }
 
@@ -138,17 +158,17 @@ export class PagosController {
    * Crea un nuevo pago y su movimiento asociado
    */
   static async createPago(
-    request: FastifyRequest<{ Body: CreatePagoRequest }>, 
+    request: FastifyRequest,
     reply: FastifyReply
   ) {
     try {
-      const pagoData = request.body;
-      
-      // TODO: Obtener id_empresa e id_usuario del usuario autenticado
-      if (!pagoData.id_empresa) {
-        pagoData.id_empresa = 1; // Por ahora hardcodeado
+      const ctx = (request as any).userContext || (request as any).user?.userContext;
+      const id_empresa = ctx?.empresaId;
+      const id_roles = ctx?.id_roles;
+      if (!id_empresa && id_roles !== 1) {
+        return responseHelper.error(reply, 'No autenticado o token inválido', 401);
       }
-      
+  const pagoData = { ...(request as any).body, id_empresa: Number(id_empresa) };
       // Crear el pago
       const pagoCreado = await PagosRepository.createPago(pagoData);
       
@@ -211,24 +231,28 @@ export class PagosController {
    * Actualiza un pago existente
    */
   static async updatePago(
-    request: FastifyRequest<{ Params: { id: string }; Body: UpdatePagoRequest }>, 
+    request: FastifyRequest,
     reply: FastifyReply
   ) {
     try {
-      const id = parseInt(request.params.id);
+  const id = parseInt((request as any).params.id);
       
       if (isNaN(id) || id <= 0) {
         return responseHelper.error(reply, 'ID de pago inválido', 400);
       }
       
-      const updateData = request.body;
+  const updateData = (request as any).body;
       
-      // TODO: Obtener id_empresa del usuario autenticado
-      const id_empresa = 1; // Por ahora hardcodeado
-      
+      // Obtener id_empresa del usuario autenticado
+      const ctx = (request as any).userContext || (request as any).user?.userContext;
+      const id_empresa = ctx?.empresaId;
+      const id_roles = ctx?.id_roles;
+      if (!id_empresa && id_roles !== 1) {
+        return responseHelper.error(reply, 'No autenticado o token inválido', 401);
+      }
       // Verificar que el pago pertenece a la empresa del usuario
-      const pagoExists = await PagosRepository.existsPagoInEmpresa(id, id_empresa);
-      if (!pagoExists) {
+      const pagoExists = await PagosRepository.existsPagoInEmpresa(id, Number(id_empresa));
+      if (!pagoExists && id_roles !== 1) {
         return responseHelper.error(reply, 'Pago no encontrado o no pertenece a su empresa', 404);
       }
 
@@ -257,22 +281,26 @@ export class PagosController {
    * Elimina un pago y su movimiento asociado
    */
   static async deletePago(
-    request: FastifyRequest<{ Params: { id: string } }>, 
+    request: FastifyRequest,
     reply: FastifyReply
   ) {
     try {
-      const id = parseInt(request.params.id);
+  const id = parseInt((request as any).params.id);
       
       if (isNaN(id) || id <= 0) {
         return responseHelper.error(reply, 'ID de pago inválido', 400);
       }
       
-      // TODO: Obtener id_empresa del usuario autenticado
-      const id_empresa = 1; // Por ahora hardcodeado
-      
+      // Obtener id_empresa del usuario autenticado
+      const ctx = (request as any).userContext || (request as any).user?.userContext;
+      const id_empresa = ctx?.empresaId;
+      const id_roles = ctx?.id_roles;
+      if (!id_empresa && id_roles !== 1) {
+        return responseHelper.error(reply, 'No autenticado o token inválido', 401);
+      }
       // Verificar que el pago pertenece a la empresa del usuario
-      const pagoExists = await PagosRepository.existsPagoInEmpresa(id, id_empresa);
-      if (!pagoExists) {
+      const pagoExists = await PagosRepository.existsPagoInEmpresa(id, Number(id_empresa));
+      if (!pagoExists && id_roles !== 1) {
         return responseHelper.error(reply, 'Pago no encontrado o no pertenece a su empresa', 404);
       }
 
@@ -336,22 +364,26 @@ export class PagosController {
    * Obtiene el resumen financiero de una reserva
    */
   static async getResumenReserva(
-    request: FastifyRequest<{ Params: { id_reserva: string } }>, 
+    request: FastifyRequest,
     reply: FastifyReply
   ) {
     try {
-      const id_reserva = parseInt(request.params.id_reserva);
+  const id_reserva = parseInt((request as any).params.id_reserva);
       
       if (isNaN(id_reserva) || id_reserva <= 0) {
         return responseHelper.error(reply, 'ID de reserva inválido', 400);
       }
       
-      // TODO: Obtener id_empresa del usuario autenticado
-      const id_empresa = 1; // Por ahora hardcodeado
-      
+      // Obtener id_empresa del usuario autenticado
+      const ctx = (request as any).userContext || (request as any).user?.userContext;
+      const id_empresa = ctx?.empresaId;
+      const id_roles = ctx?.id_roles;
+      if (!id_empresa && id_roles !== 1) {
+        return responseHelper.error(reply, 'No autenticado o token inválido', 401);
+      }
       // Verificar que la reserva pertenece a la empresa del usuario
-      const reservaExists = await PagosRepository.existsReservaInEmpresa(id_reserva, id_empresa);
-      if (!reservaExists) {
+      const reservaExists = await PagosRepository.existsReservaInEmpresa(id_reserva, Number(id_empresa));
+      if (!reservaExists && id_roles !== 1) {
         return responseHelper.error(reply, 'Reserva no encontrada o no pertenece a su empresa', 404);
       }
 
@@ -373,16 +405,20 @@ export class PagosController {
    * Obtiene pagos de una empresa por fecha específica
    */
   static async getPagosByFecha(
-    request: FastifyRequest<{ Querystring: { fecha: string } }>, 
+    request: FastifyRequest,
     reply: FastifyReply
   ) {
     try {
-      const { fecha } = request.query;
+  const { fecha } = (request as any).query;
       
-      // TODO: Obtener id_empresa del usuario autenticado
-      const id_empresa = 1; // Por ahora hardcodeado
-      
-      const pagos = await PagosRepository.getPagosByEmpresaFecha(id_empresa, fecha);
+      // Obtener id_empresa del usuario autenticado
+      const ctx = (request as any).userContext || (request as any).user?.userContext;
+      const id_empresa = ctx?.empresaId;
+      const id_roles = ctx?.id_roles;
+      if (!id_empresa && id_roles !== 1) {
+        return responseHelper.error(reply, 'No autenticado o token inválido', 401);
+      }
+      const pagos = await PagosRepository.getPagosByEmpresaFecha(Number(id_empresa), fecha);
       
       // Calcular total del día
       const totalDia = pagos.reduce((sum, pago) => sum + pago.monto, 0);
@@ -404,20 +440,22 @@ export class PagosController {
    * Obtiene estadísticas de pagos por método de pago
    */
   static async getEstadisticasMetodosPago(
-    request: FastifyRequest<{ Querystring: Record<string, string> }>, 
+    request: FastifyRequest,
     reply: FastifyReply
   ) {
     try {
       // Convertir parámetros de query
-      const fecha_inicio = request.query.fecha_inicio;
-      const fecha_fin = request.query.fecha_fin;
-      const id_empresa = request.query.id_empresa ? parseInt(request.query.id_empresa) : undefined;
-      
-      // TODO: Obtener id_empresa del usuario autenticado si no se proporciona
-      const empresaId = id_empresa || 1; // Por ahora hardcodeado
-      
+  const fecha_inicio = (request as any).query?.fecha_inicio;
+  const fecha_fin = (request as any).query?.fecha_fin;
+      // Obtener id_empresa del usuario autenticado
+      const ctx = (request as any).userContext || (request as any).user?.userContext;
+      const id_empresa = ctx?.empresaId;
+      const id_roles = ctx?.id_roles;
+      if (!id_empresa && id_roles !== 1) {
+        return responseHelper.error(reply, 'No autenticado o token inválido', 401);
+      }
       const estadisticas = await PagosRepository.getEstadisticasMetodosPago(
-        empresaId, 
+        Number(id_empresa), 
         fecha_inicio, 
         fecha_fin
       );

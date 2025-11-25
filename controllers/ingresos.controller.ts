@@ -55,7 +55,7 @@ export const ingresosController = {
       const filtros = {
         fecha,
         id_inmueble: id_inmueble ? Number(id_inmueble) : undefined,
-        empresa_id: ctx.empresaId || 0
+        empresa_id: Number(ctx.empresaId)
       };
 
       // Validar id_inmueble si se proporciona
@@ -147,7 +147,7 @@ export const ingresosController = {
       const filtros = {
         fecha,
         id_inmueble: id_inmueble ? Number(id_inmueble) : undefined,
-        empresa_id: ctx.empresaId || 0
+        empresa_id: Number(ctx.empresaId)
       };
 
       // Validar id_inmueble si se proporciona
@@ -210,7 +210,7 @@ export const ingresosController = {
 
     try {
       // Llamar al servicio
-      const { data, error } = await getInmueblesFiltroService(ctx.empresaId || 0);
+  const { data, error } = await getInmueblesFiltroService(Number(ctx.empresaId));
 
       if (error) {
         return reply.status(error.status || 500).send(

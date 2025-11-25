@@ -11,7 +11,6 @@ export async function getPropietariosService(id_empresa?: number) {
     try {
         // 1. Consultar propietarios desde el repositorio
         const { data: propietarios, error } = await propietarioRepository.getPropietarios(id_empresa);
-        
         if (error) {
             return { 
                 data: null, 
@@ -22,7 +21,6 @@ export async function getPropietariosService(id_empresa?: number) {
                 } 
             };
         }
-        
         // 2. Retornar los propietarios obtenidos
         return { data: propietarios, error: null };
     } catch (error) {

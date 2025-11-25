@@ -27,17 +27,77 @@ import {
 
 export const movimientosController = {
   /**
-   * GET /movimientos/fecha/{fecha}?empresa_id={empresa_id}
-   * Obtiene movimientos por fecha y empresa
+   * GET /movimientos/inmueble?id_inmueble={id}&fecha={fecha}
+   * Obtiene movimientos por inmueble y fecha
    */
-  getMovimientosByFecha: async (req: FastifyRequest, reply: FastifyReply) => {
+  getMovimientosByInmueble: async (req: FastifyRequest, reply: FastifyReply) => {
     const ctx = req.userContext;
-    
     // Verificar autenticación
     if (!ctx || !ctx.id) {
       return reply.status(401).send(
         errorResponse({
           message: 'No autenticado',
+          code: 401,
+          error: 'Unauthorized'
+        })
+      );
+    }
+    try {
+      // Validar query parameters
+      const queryValidation = MovimientosInmuebleQuerySchema.safeParse(req.query);
+      if (!queryValidation.success) {
+        return reply.status(400).send(
+          errorResponse({
+            message: 'Parámetros de consulta inválidos',
+            code: 400,
+            error: queryValidation.error.errors
+          })
+        );
+      }
+      const { id_inmueble, fecha } = queryValidation.data;
+      // Llamar al servicio
+      const { data, error } = await getMovimientosInmuebleService(id_inmueble, fecha);
+      if (error) {
+        return reply.status(error.status || 500).send(
+          errorResponse({
+            message: error.message,
+            code: error.status || 500,
+            error: error.details || 'Internal Server Error'
+          })
+        );
+      }
+      // Calcular resumen
+      const totalIngresos = data?.filter(m => m.tipo === 'ingreso').reduce((sum, m) => sum + m.monto, 0) || 0;
+      const totalEgresos = data?.filter(m => m.tipo === 'egreso').reduce((sum, m) => sum + m.monto, 0) || 0;
+      const response = {
+        ingresos: totalIngresos,
+        egresos: totalEgresos,
+        movimientos: data || []
+      };
+      const cantidadMovimientos = data?.length || 0;
+      const message = `${cantidadMovimientos} movimientos encontrados para la fecha ${fecha}`;
+      return reply.send(successResponse(response));
+    } catch (err) {
+      console.error('Error en getMovimientosByInmueble:', err);
+      return reply.status(500).send(
+        errorResponse({
+          message: 'Error interno del servidor',
+          code: 500,
+          error: err
+        })
+      );
+    }
+  },
+  /**
+   * GET /movimientos/fecha/{fecha}?empresa_id={empresa_id}
+   * Obtiene movimientos por fecha y empresa
+   */
+  getMovimientosByFecha: async (req: FastifyRequest, reply: FastifyReply) => {
+    const ctx = req.userContext;
+    if (!ctx || !ctx.id) {
+      return reply.status(401).send(
+        errorResponse({
+          message: 'No autenticado o token inválido',
           code: 401,
           error: 'Unauthorized'
         })
@@ -70,8 +130,23 @@ export const movimientosController = {
       }
 
       const { fecha } = pathValidation.data;
-      const { empresa_id, plataforma_origen } = queryValidation.data;
-
+      const { plataforma_origen } = queryValidation.data;
+      // Lógica superadmin: si es superadmin y empresaId es null, no filtrar por empresa
+      let empresa_id: string;
+      if (ctx.id_roles === 1 && (ctx.empresaId === null || ctx.empresaId === undefined)) {
+        empresa_id = '';
+      } else {
+        if (!ctx.empresaId) {
+          return reply.status(401).send(
+            errorResponse({
+              message: 'No autenticado o token inválido',
+              code: 401,
+              error: 'Unauthorized'
+            })
+          );
+        }
+        empresa_id = String(ctx.empresaId);
+      }
       // Llamar al servicio con filtro de plataforma
       const { data, error } = await getMovimientosFechaService(empresa_id, fecha, plataforma_origen);
 
@@ -86,82 +161,8 @@ export const movimientosController = {
       }
 
       return reply.send(successResponse(data));
-
     } catch (err) {
       console.error('Error en getMovimientosByFecha:', err);
-      return reply.status(500).send(
-        errorResponse({
-          message: 'Error interno del servidor',
-          code: 500,
-          error: err
-        })
-      );
-    }
-  },
-
-  /**
-   * GET /movimientos/inmueble?id_inmueble={id}&fecha={fecha}
-   * Obtiene movimientos por inmueble y fecha
-   */
-  getMovimientosByInmueble: async (req: FastifyRequest, reply: FastifyReply) => {
-    const ctx = req.userContext;
-    
-    // Verificar autenticación
-    if (!ctx || !ctx.id) {
-      return reply.status(401).send(
-        errorResponse({
-          message: 'No autenticado',
-          code: 401,
-          error: 'Unauthorized'
-        })
-      );
-    }
-
-    try {
-      // Validar query parameters
-      const queryValidation = MovimientosInmuebleQuerySchema.safeParse(req.query);
-      if (!queryValidation.success) {
-        return reply.status(400).send(
-          errorResponse({
-            message: 'Parámetros de consulta inválidos',
-            code: 400,
-            error: queryValidation.error.errors
-          })
-        );
-      }
-
-      const { id_inmueble, fecha } = queryValidation.data;
-
-      // Llamar al servicio
-      const { data, error } = await getMovimientosInmuebleService(id_inmueble, fecha);
-
-      if (error) {
-        return reply.status(error.status || 500).send(
-          errorResponse({
-            message: error.message,
-            code: error.status || 500,
-            error: error.details || 'Internal Server Error'
-          })
-        );
-      }
-
-      // Calcular resumen
-      const totalIngresos = data?.filter(m => m.tipo === 'ingreso').reduce((sum, m) => sum + m.monto, 0) || 0;
-      const totalEgresos = data?.filter(m => m.tipo === 'egreso').reduce((sum, m) => sum + m.monto, 0) || 0;
-
-      const response = {
-        ingresos: totalIngresos,
-        egresos: totalEgresos,
-        movimientos: data || []
-      };
-
-      const cantidadMovimientos = data?.length || 0;
-      const message = `${cantidadMovimientos} movimientos encontrados para la fecha ${fecha}`;
-
-      return reply.send(successResponse(response));
-
-    } catch (err) {
-      console.error('Error en getMovimientosByInmueble:', err);
       return reply.status(500).send(
         errorResponse({
           message: 'Error interno del servidor',
@@ -178,12 +179,10 @@ export const movimientosController = {
    */
   getResumenDiario: async (req: FastifyRequest, reply: FastifyReply) => {
     const ctx = req.userContext;
-    
-    // Verificar autenticación
-    if (!ctx || !ctx.id) {
+    if (!ctx || !ctx.id || (!ctx.empresaId && ctx.id_roles !== 1)) {
       return reply.status(401).send(
         errorResponse({
-          message: 'No autenticado',
+          message: 'No autenticado o token inválido',
           code: 401,
           error: 'Unauthorized'
         })
@@ -215,11 +214,10 @@ export const movimientosController = {
         );
       }
 
-      const { fecha } = pathValidation.data;
-      const { empresa_id } = queryValidation.data;
-
-      // Llamar al servicio
-      const { data, error } = await getResumenDiarioService(empresa_id, fecha);
+  const { fecha } = pathValidation.data;
+  const empresa_id = String(ctx.empresaId);
+  // Llamar al servicio
+  const { data, error } = await getResumenDiarioService(empresa_id, fecha);
 
       if (error) {
         return reply.status(error.status || 500).send(
@@ -506,12 +504,10 @@ export const movimientosController = {
    */
   getInmueblesSelector: async (req: FastifyRequest, reply: FastifyReply) => {
     const ctx = req.userContext;
-    
-    // Verificar autenticación
-    if (!ctx || !ctx.id) {
+    if (!ctx || !ctx.id || !ctx.empresaId) {
       return reply.status(401).send(
         errorResponse({
-          message: 'No autenticado',
+          message: 'No autenticado o token inválido',
           code: 401,
           error: 'Unauthorized'
         })
@@ -531,10 +527,9 @@ export const movimientosController = {
         );
       }
 
-      const { empresa_id } = queryValidation.data;
-
-      // Llamar al servicio
-      const { data, error } = await getInmueblesSelectorsService(empresa_id);
+  const empresa_id = String(ctx.empresaId);
+  // Llamar al servicio
+  const { data, error } = await getInmueblesSelectorsService(empresa_id);
 
       if (error) {
         return reply.status(error.status || 500).send(
@@ -566,12 +561,10 @@ export const movimientosController = {
    */
   filtrarMovimientosPorPlataforma: async (req: FastifyRequest, reply: FastifyReply) => {
     const ctx = req.userContext;
-    
-    // Verificar autenticación
-    if (!ctx || !ctx.id) {
+    if (!ctx || !ctx.id || !ctx.empresaId) {
       return reply.status(401).send(
         errorResponse({
-          message: 'No autenticado',
+          message: 'No autenticado o token inválido',
           code: 401,
           error: 'Unauthorized'
         })
@@ -582,20 +575,19 @@ export const movimientosController = {
       // Validar query parameters
       const query = req.query as any;
       
-      if (!query.fecha || !query.plataforma || !query.empresa_id) {
+      if (!query.fecha || !query.plataforma) {
         return reply.status(400).send(
           errorResponse({
-            message: 'Parámetros requeridos: fecha, plataforma y empresa_id',
+            message: 'Parámetros requeridos: fecha y plataforma',
             code: 400,
             error: 'Missing required parameters'
           })
         );
       }
-
-      const { fecha, plataforma, empresa_id } = query;
-
-      // Llamar al servicio
-      const { data, error } = await filtrarMovimientosPorPlataformaService(fecha, plataforma, empresa_id);
+      const { fecha, plataforma } = query;
+  const empresa_id = String(ctx.empresaId);
+  // Llamar al servicio
+  const { data, error } = await filtrarMovimientosPorPlataformaService(fecha, plataforma, empresa_id);
 
       if (error) {
         return reply.status(error.status || 500).send(
@@ -630,12 +622,10 @@ export const movimientosController = {
    */
   reportePorPlataforma: async (req: FastifyRequest, reply: FastifyReply) => {
     const ctx = req.userContext;
-    
-    // Verificar autenticación
-    if (!ctx || !ctx.id) {
+    if (!ctx || !ctx.id || !ctx.empresaId) {
       return reply.status(401).send(
         errorResponse({
-          message: 'No autenticado',
+          message: 'No autenticado o token inválido',
           code: 401,
           error: 'Unauthorized'
         })
@@ -646,20 +636,19 @@ export const movimientosController = {
       // Validar query parameters
       const query = req.query as any;
       
-      if (!query.fecha_inicio || !query.fecha_fin || !query.empresa_id) {
+      if (!query.fecha_inicio || !query.fecha_fin) {
         return reply.status(400).send(
           errorResponse({
-            message: 'Parámetros requeridos: fecha_inicio, fecha_fin y empresa_id',
+            message: 'Parámetros requeridos: fecha_inicio y fecha_fin',
             code: 400,
             error: 'Missing required parameters'
           })
         );
       }
-
-      const { fecha_inicio, fecha_fin, empresa_id } = query;
-
-      // Llamar al servicio
-      const { data, error } = await reportePorPlataformaService(fecha_inicio, fecha_fin, empresa_id);
+      const { fecha_inicio, fecha_fin } = query;
+  const empresa_id = String(ctx.empresaId);
+  // Llamar al servicio
+  const { data, error } = await reportePorPlataformaService(fecha_inicio, fecha_fin, empresa_id);
 
       if (error) {
         return reply.status(error.status || 500).send(
