@@ -17,7 +17,9 @@ import { movimientosRoutes } from './routes/movimientos.routes';
 import { ingresosRoutes } from './routes/ingresos.routes';
 import { egresosRoutes } from './routes/egresos.routes';
 import pagosRoutes from './routes/pagos.routes';
+import { reportesRoutes } from './routes/reportes.routes';
 import totalesReservaRoutes from './routes/totalesReserva.routes';
+
 import { errorHandler } from './middlewares/errorHandler';
 
 const server = fastify({ logger: true });
@@ -69,6 +71,7 @@ server.register(ingresosRoutes, { prefix: '/ingresos' });
 server.register(egresosRoutes, { prefix: '/egresos' });
 server.register(pagosRoutes);
 server.register(totalesReservaRoutes, { prefix: '/admin/totales-reservas' });
+server.register(reportesRoutes, { prefix: '/reportes' });
 
 // Error handler
 server.setErrorHandler(errorHandler);
