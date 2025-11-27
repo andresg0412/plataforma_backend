@@ -39,12 +39,15 @@ export class ReportesController {
     }
     async getOpciones(request: FastifyRequest, reply: FastifyReply) {
         try {
+            console.log('ReportesController.getOpciones called');
             const ctx = (request as any).userContext || (request as any).user?.userContext;
             if (!ctx) {
+                console.log('ReportesController.getOpciones: No context');
                 return reply.code(401).send(errorResponse({ message: 'No autenticado o token inválido', code: 401 }));
             }
 
             const query = request.query as { tipo?: string, empresaId?: string };
+            console.log('ReportesController.getOpciones query:', query);
             let empresaId: number | undefined = query.empresaId ? Number(query.empresaId) : undefined;
             const tipo = query.tipo;
 

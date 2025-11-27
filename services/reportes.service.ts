@@ -177,6 +177,7 @@ export class ReportesService {
     }
     async getOpciones(empresaId?: number, tipo?: string) {
         try {
+            console.log('ReportesService.getOpciones called with:', { empresaId, tipo });
             const params: any[] = [];
             let queryEmpresas = `SELECT id_empresa as id, nombre FROM empresas WHERE 1=1`;
             let queryInmuebles = `SELECT id_inmueble as id, nombre FROM inmuebles WHERE 1=1`;
