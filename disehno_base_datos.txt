@@ -647,3 +647,19 @@ CREATE TRIGGER trigger_pagos_fecha_actualizacion
     BEFORE UPDATE ON pagos
     FOR EACH ROW
     EXECUTE FUNCTION actualizar_fecha_actualizacion();
+
+-- ========================================================================
+-- AGREGAR COLUMNA fecha_reporte A MOVIMIENTOS Y PAGOS
+-- ========================================================================
+
+-- Agregar fecha_reporte a movimientos
+ALTER TABLE movimientos ADD COLUMN fecha_reporte DATE;
+COMMENT ON COLUMN movimientos.fecha_reporte IS 'Fecha de reporte del movimiento, distinta a la fecha de creación o transacción';
+
+-- Agregar fecha_reporte a pagos
+ALTER TABLE pagos ADD COLUMN fecha_reporte DATE;
+COMMENT ON COLUMN pagos.fecha_reporte IS 'Fecha de reporte del pago, distinta a la fecha de creación o transacción';
+
+-- Crear índices para fecha_reporte
+CREATE INDEX IF NOT EXISTS idx_movimientos_fecha_reporte ON movimientos(fecha_reporte);
+CREATE INDEX IF NOT EXISTS idx_pagos_fecha_reporte ON pagos(fecha_reporte);
