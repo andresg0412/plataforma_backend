@@ -23,6 +23,7 @@ export class ReportesService {
           r.numero_huespedes,
           r.total_reserva,
           r.estado,
+          r.plataforma_origen,
           i.nombre as nombre_inmueble,
           hp.nombre as nombre_huesped,
           hp.apellido as apellido_huesped,
