@@ -1,10 +1,10 @@
 import pool from '../libs/db';
-import { 
-  Movimiento, 
-  CreateMovimientoData, 
-  EditMovimientoData, 
+import {
+  Movimiento,
+  CreateMovimientoData,
+  EditMovimientoData,
   ResumenDiario,
-  InmuebleSelector 
+  InmuebleSelector
 } from '../interfaces/movimiento.interface';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -80,7 +80,7 @@ export class MovimientosRepository {
       WHERE m.id_inmueble = $1 AND m.fecha = $2
       ORDER BY m.fecha_creacion DESC
     `;
-    
+
     const { rows } = await pool.query(query, [idInmueble, fecha]);
     return rows;
   }
@@ -129,7 +129,7 @@ export class MovimientosRepository {
    */
   static async createMovimiento(data: CreateMovimientoData): Promise<Movimiento> {
     const id = uuidv4();
-    
+
     const query = `
       INSERT INTO movimientos (
         id, fecha, tipo, concepto, descripcion, monto, 
@@ -139,7 +139,7 @@ export class MovimientosRepository {
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW(), $12, $13)
       RETURNING *
     `;
-    
+
     const values = [
       id,
       data.fecha,
@@ -155,9 +155,9 @@ export class MovimientosRepository {
       data.plataforma_origen,
       data.id_pago
     ];
-    
+
     const { rows } = await pool.query(query, values);
-    
+
     // Obtener el movimiento completo con JOINs
     return this.getMovimientoById(rows[0].id);
   }
@@ -190,13 +190,13 @@ export class MovimientosRepository {
       LEFT JOIN reservas r ON m.id_reserva = r.id_reserva::text
       WHERE m.id = $1
     `;
-    
+
     const { rows } = await pool.query(query, [id]);
-    
+
     if (rows.length === 0) {
       throw new Error('Movimiento no encontrado');
     }
-    
+
     return rows[0];
   }
 
@@ -270,7 +270,7 @@ export class MovimientosRepository {
     `;
 
     const { rows } = await pool.query(query, values);
-    
+
     if (rows.length === 0) {
       throw new Error('Movimiento no encontrado');
     }
@@ -285,7 +285,7 @@ export class MovimientosRepository {
   static async deleteMovimiento(id: string): Promise<void> {
     const query = 'DELETE FROM movimientos WHERE id = $1';
     const { rowCount } = await pool.query(query, [id]);
-    
+
     if (rowCount === 0) {
       throw new Error('Movimiento no encontrado');
     }
@@ -320,7 +320,7 @@ export class MovimientosRepository {
       WHERE m.id_pago = $1
       ORDER BY m.fecha_creacion DESC
     `;
-    
+
     const { rows } = await pool.query(query, [pagoId]);
     return rows;
   }
@@ -331,7 +331,7 @@ export class MovimientosRepository {
   static async deleteMovimientosByPago(pagoId: number): Promise<number> {
     const query = 'DELETE FROM movimientos WHERE id_pago = $1';
     const { rowCount } = await pool.query(query, [pagoId]);
-    
+
     return rowCount || 0;
   }
 
@@ -354,9 +354,9 @@ export class MovimientosRepository {
       GROUP BY m.plataforma_origen
       ORDER BY total_ingresos DESC
     `;
-    
+
     const { rows } = await pool.query(query, [fechaInicio, fechaFin, empresaId]);
-    
+
     // Formatear resultado como objeto con claves de plataforma
     const reporte: any = {};
     rows.forEach(row => {
@@ -365,26 +365,34 @@ export class MovimientosRepository {
         cantidad_reservas: parseInt(row.cantidad_reservas) || 0
       };
     });
-    
+
     return reporte;
   }
 
   /**
    * Obtiene inmuebles para selector
    */
-  static async getInmueblesSelector(empresaId: string): Promise<InmuebleSelector[]> {
-    const query = `
+  static async getInmueblesSelector(empresaId?: string | null): Promise<InmuebleSelector[]> {
+    let query = `
       SELECT 
         id_inmueble::text as id,
         nombre,
         direccion,
         estado
       FROM inmuebles 
-      WHERE id_empresa = $1 AND estado = 'activo'
-      ORDER BY nombre ASC
+      WHERE estado = 'activo'
     `;
-    
-    const { rows } = await pool.query(query, [empresaId]);
+
+    const params: any[] = [];
+
+    if (empresaId) {
+      query += ` AND id_empresa = $1`;
+      params.push(empresaId);
+    }
+
+    query += ` ORDER BY nombre ASC`;
+
+    const { rows } = await pool.query(query, params);
     return rows;
   }
 
@@ -396,7 +404,7 @@ export class MovimientosRepository {
       SELECT 1 FROM inmuebles 
       WHERE id_inmueble::text = $1 AND id_empresa = $2
     `;
-    
+
     const { rows } = await pool.query(query, [inmuebleId, empresaId]);
     return rows.length > 0;
   }
@@ -410,7 +418,7 @@ export class MovimientosRepository {
       JOIN inmuebles i ON r.id_inmueble = i.id_inmueble
       WHERE r.id_reserva::text = $1 AND i.id_empresa = $2
     `;
-    
+
     const { rows } = await pool.query(query, [reservaId, empresaId]);
     return rows.length > 0;
   }

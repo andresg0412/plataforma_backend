@@ -214,10 +214,10 @@ export const movimientosController = {
         );
       }
 
-  const { fecha } = pathValidation.data;
-  const empresa_id = String(ctx.empresaId);
-  // Llamar al servicio
-  const { data, error } = await getResumenDiarioService(empresa_id, fecha);
+      const { fecha } = pathValidation.data;
+      const empresa_id = String(ctx.empresaId);
+      // Llamar al servicio
+      const { data, error } = await getResumenDiarioService(empresa_id, fecha);
 
       if (error) {
         return reply.status(error.status || 500).send(
@@ -249,7 +249,7 @@ export const movimientosController = {
    */
   createMovimiento: async (req: FastifyRequest, reply: FastifyReply) => {
     const ctx = req.userContext;
-    
+
     // Verificar autenticación
     if (!ctx || !ctx.id) {
       return reply.status(401).send(
@@ -311,7 +311,7 @@ export const movimientosController = {
    */
   editMovimiento: async (req: FastifyRequest, reply: FastifyReply) => {
     const ctx = req.userContext;
-    
+
     // Verificar autenticación
     if (!ctx || !ctx.id) {
       return reply.status(401).send(
@@ -384,7 +384,7 @@ export const movimientosController = {
    */
   getMovimientoById: async (req: FastifyRequest, reply: FastifyReply) => {
     const ctx = req.userContext;
-    
+
     // Verificar autenticación
     if (!ctx || !ctx.id) {
       return reply.status(401).send(
@@ -444,7 +444,7 @@ export const movimientosController = {
    */
   deleteMovimiento: async (req: FastifyRequest, reply: FastifyReply) => {
     const ctx = req.userContext;
-    
+
     // Verificar autenticación
     if (!ctx || !ctx.id) {
       return reply.status(401).send(
@@ -504,7 +504,8 @@ export const movimientosController = {
    */
   getInmueblesSelector: async (req: FastifyRequest, reply: FastifyReply) => {
     const ctx = req.userContext;
-    if (!ctx || !ctx.id || !ctx.empresaId) {
+    // Allow superadmin (role 1) to proceed without empresaId
+    if (!ctx || !ctx.id || (!ctx.empresaId && ctx.id_roles !== 1)) {
       return reply.status(401).send(
         errorResponse({
           message: 'No autenticado o token inválido',
@@ -527,9 +528,9 @@ export const movimientosController = {
         );
       }
 
-  const empresa_id = String(ctx.empresaId);
-  // Llamar al servicio
-  const { data, error } = await getInmueblesSelectorsService(empresa_id);
+      const empresa_id = ctx.empresaId ? String(ctx.empresaId) : null;
+      // Llamar al servicio
+      const { data, error } = await getInmueblesSelectorsService(empresa_id);
 
       if (error) {
         return reply.status(error.status || 500).send(
@@ -574,7 +575,7 @@ export const movimientosController = {
     try {
       // Validar query parameters
       const query = req.query as any;
-      
+
       if (!query.fecha || !query.plataforma) {
         return reply.status(400).send(
           errorResponse({
@@ -585,9 +586,9 @@ export const movimientosController = {
         );
       }
       const { fecha, plataforma } = query;
-  const empresa_id = String(ctx.empresaId);
-  // Llamar al servicio
-  const { data, error } = await filtrarMovimientosPorPlataformaService(fecha, plataforma, empresa_id);
+      const empresa_id = String(ctx.empresaId);
+      // Llamar al servicio
+      const { data, error } = await filtrarMovimientosPorPlataformaService(fecha, plataforma, empresa_id);
 
       if (error) {
         return reply.status(error.status || 500).send(
@@ -635,7 +636,7 @@ export const movimientosController = {
     try {
       // Validar query parameters
       const query = req.query as any;
-      
+
       if (!query.fecha_inicio || !query.fecha_fin) {
         return reply.status(400).send(
           errorResponse({
@@ -646,9 +647,9 @@ export const movimientosController = {
         );
       }
       const { fecha_inicio, fecha_fin } = query;
-  const empresa_id = String(ctx.empresaId);
-  // Llamar al servicio
-  const { data, error } = await reportePorPlataformaService(fecha_inicio, fecha_fin, empresa_id);
+      const empresa_id = String(ctx.empresaId);
+      // Llamar al servicio
+      const { data, error } = await reportePorPlataformaService(fecha_inicio, fecha_fin, empresa_id);
 
       if (error) {
         return reply.status(error.status || 500).send(

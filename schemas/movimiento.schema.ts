@@ -116,8 +116,8 @@ export const EditMovimientoSchema = z.object({
   path: ["concepto"]
 }).refine((data) => {
   // Validar que plataforma_origen solo se use en ingresos de reserva
-  if (data.plataforma_origen && data.tipo && data.concepto && 
-      (data.tipo !== 'ingreso' || data.concepto !== 'reserva')) {
+  if (data.plataforma_origen && data.tipo && data.concepto &&
+    (data.tipo !== 'ingreso' || data.concepto !== 'reserva')) {
     return false;
   }
   return true;
@@ -149,7 +149,7 @@ export const FechaParamSchema = z.object({
 
 // Schema para query de inmuebles selector
 export const InmueblesSelectorrQuerySchema = z.object({
-  empresa_id: z.string().min(1, { message: "El ID de empresa es requerido" })
+  empresa_id: z.string().optional()
 });
 
 // Tipos TypeScript derivados de los schemas
